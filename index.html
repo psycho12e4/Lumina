@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumina | Light. Calm. Glow.</title>
+<meta content="Lumina — artisanal soy wax candles, hand-poured with intention. Light. Calm. Glow." name="description"/>
+<!-- Social sharing meta — replace og:image with an absolute URL once the domain is live -->
+<meta content="Lumina | Light. Calm. Glow." property="og:title"/>
+<meta content="Lumina — artisanal soy wax candles, hand-poured with intention. Light. Calm. Glow." property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="assets/img/photo-12.png" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<link as="image" href="assets/img/photo-12.png" rel="preload"/>
+<link href="assets/img/lumina-logo.png" rel="icon" type="image/png"/>
+<script>document.documentElement.classList.add('js');</script>
+<!-- Google Fonts: Domine, Hanken Grotesk, EB Garamond, Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@400..700&amp;family=EB+Garamond:ital,wght@0,400..800;1,400..800&amp;family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for horizontal scrolling lists */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+<link href="assets/css/tailwind.css" rel="stylesheet"/>
+<link href="assets/css/site.css" rel="stylesheet"/>
+<script defer="" src="assets/js/main.js"></script>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased flex flex-col min-h-screen selection:bg-toasted-almond selection:text-deep-charcoal">
+<!-- TopNavBar (Shared Component) -->
+<header class="w-full top-0 z-50 bg-background/95 backdrop-blur border-b border-copper-bronze/30 sticky transition-shadow duration-300" id="site-header">
+<div class="flex flex-col items-center w-full px-margin-mobile md:px-gutter py-3 max-w-container-max mx-auto">
+<!-- Logo row -->
+<div class="flex items-center justify-between w-full">
+<!-- Mobile menu button -->
+<button aria-controls="mobile-nav" aria-expanded="false" aria-label="Open menu" class="md:hidden p-2 -ml-2 text-copper-bronze hover:opacity-70 transition-opacity duration-300" id="menu-toggle">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+<!-- Brand Logo -->
+<a class="flex items-center gap-3 font-headline-md text-2xl md:text-headline-md text-copper-bronze uppercase tracking-widest transition-opacity duration-300 hover:opacity-80" href="index.html">
+<img alt="Lumina logo" class="w-16 h-16 md:w-20 md:h-20 object-contain" src="assets/img/lumina-logo.png"/>
+<span class="hidden sm:inline">Lumina</span>
+</a>
+<!-- Trailing Icon Actions -->
+<div class="flex items-center gap-1 text-copper-bronze ml-auto">
+<button aria-label="Open shopping bag" data-cart-toggle="" class="p-2 relative transition-opacity duration-300 hover:opacity-70">
+<span class="material-symbols-outlined text-2xl" data-icon="shopping_bag">shopping_bag</span>
+<span class="absolute top-0 right-0 bg-copper-bronze text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold" data-cart-count="">0</span>
+</button>
+</div>
+</div>
+<!-- Desktop Navigation Links -->
+<nav aria-label="Primary" class="hidden md:flex items-center justify-center gap-8 w-full pt-3 font-body-md text-body-md">
+<a aria-current="page" class="nav-link text-copper-bronze font-bold" href="index.html">Home</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="story.html">Our Story</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="wax.html">Soya Wax Education</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="shop.html">Shop</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="gallery.html">Gallery</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="contact.html">Contact</a>
+</nav>
+</div>
+<!-- Mobile Navigation Drawer -->
+<nav aria-label="Mobile" class="md:hidden w-full px-margin-mobile font-body-md text-body-md" id="mobile-nav">
+<div class="flex flex-col pb-4">
+<a aria-current="page" class="py-3 border-b border-copper-bronze/10 text-copper-bronze font-bold" href="index.html">Home</a>
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="story.html">Our Story</a>
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="wax.html">Soya Wax Education</a>
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="shop.html">Shop</a>
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="gallery.html">Gallery</a>
+<a class="py-3 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="contact.html">Contact</a>
+</div>
+</nav>
+</header>
+<main class="flex-grow">
+<!-- Hero Section -->
+<section class="relative h-[80vh] min-h-[600px] w-full flex items-center justify-center overflow-hidden">
+<!-- Background Image -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat kenburns" data-alt="A beautifully lit, artisanal soy wax candle burning softly on a rustic wooden table in a dimly lit, cozy room. The warm golden light from the flame casts gentle, inviting shadows across the tactile, textured surfaces of the room, evoking a sense of calm, slow living, and sophisticated domestic sanctuary. The mood is intimate, luxurious, and peaceful, aligning with a high-end minimalist aesthetic." style="background-image: url('assets/img/photo-12.png');">
+<!-- Subtle dark overlay to ensure text readability -->
+<div class="absolute inset-0 bg-deep-charcoal/40 mix-blend-multiply"></div>
+</div>
+<!-- Content -->
+<div class="relative z-10 flex flex-col items-center justify-center text-center px-margin-mobile md:px-gutter max-w-container-max mx-auto">
+<h1 class="hero-rise font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-white mb-4 tracking-wide drop-shadow-md">
+                    Lumina
+                </h1>
+<p class="hero-rise-2 font-subtitle-italic text-subtitle-italic text-toasted-almond mb-8 tracking-widest drop-shadow-sm">
+                    Light. Calm. Glow.
+                </p>
+<a class="hero-rise-3 btn-sheen glow-pulse inline-flex items-center justify-center px-8 py-3 bg-copper-bronze text-white font-label-caps text-label-caps rounded uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-all duration-300 ease-in-out shadow-sm border border-transparent hover:border-copper-bronze hover:shadow-md" href="shop.html">
+                    Explore Collection
+                </a>
+</div>
+</section>
+<!-- Brand Introduction -->
+<section class="py-section-padding px-margin-mobile md:px-gutter max-w-container-max mx-auto">
+<div class="bg-light-cream border border-copper-bronze p-8 md:p-16 flex flex-col md:flex-row items-center gap-12 relative" data-reveal="">
+<!-- Decorative Frame Line inside -->
+<div class="absolute inset-2 md:inset-4 border border-copper-bronze/20 pointer-events-none"></div>
+<div class="w-full md:w-1/2 flex justify-center order-2 md:order-1 relative z-10">
+<div class="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border fine-line-weight border-copper-bronze p-2">
+<img alt="Brand Story Image" class="w-full h-full object-cover rounded-full" decoding="async" loading="lazy" data-alt="A close-up of skilled hands pouring melted, creamy soy wax into an elegant glass vessel. The setting is an artisan workshop flooded with soft, natural daylight. Tools of the trade and raw natural ingredients rest on a clean, light-colored workbench. The image conveys a profound dedication to slow craftsmanship, organic materials, and minimalist luxury, fitting perfectly with a warm, refined brand identity." src="assets/img/photo-13.png"/>
+</div>
+</div>
+<div class="w-full md:w-1/2 flex flex-col justify-center text-center md:text-left order-1 md:order-2 relative z-10">
+<h2 class="font-headline-md text-headline-md text-copper-bronze mb-6">Our Sanctuary</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-6 leading-relaxed">
+                        At Lumina, we believe in the quiet power of a solitary flame. Hand-poured with intention, our artisanal soya wax candles are crafted to transform your space into a sanctuary of calm. We blend organic, sustainable ingredients with fine-line aesthetics to create objects of tactile elegance.
+                    </p>
+<a class="inline-flex items-center justify-center md:justify-start gap-2 text-copper-bronze font-label-caps text-label-caps uppercase tracking-widest hover:text-toasted-almond transition-colors duration-300" href="story.html">
+                        Discover Our Story <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+<!-- Product Categories Preview -->
+<section class="py-section-padding px-margin-mobile md:px-gutter max-w-container-max mx-auto">
+<div class="text-center mb-12" data-reveal="">
+<h2 class="font-headline-md text-headline-md text-copper-bronze mb-4">Curated Collections</h2>
+<div class="w-16 h-px bg-copper-bronze mx-auto mb-4 divider-draw"></div>
+<p class="font-subtitle-italic text-subtitle-italic text-on-surface-variant">Elevate your daily rituals.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Category 1: Pillar -->
+<a class="group block relative overflow-hidden bg-light-cream border border-copper-bronze/50 hover:border-copper-bronze hover:shadow-lg hover:-translate-y-1 transition-all duration-500 p-4" data-reveal="" href="shop.html">
+<div class="aspect-[3/4] overflow-hidden mb-6 relative">
+<!-- Product Highlight Tag -->
+<span class="absolute top-2 left-2 z-20 bg-sage-green text-white font-label-caps text-[10px] px-2 py-1 rounded-full uppercase tracking-wider">Sculptural</span>
+<img alt="Pillar Candles" class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" decoding="async" loading="lazy" data-alt="A minimalist arrangement of tall, unlit sculptural pillar candles in varying warm cream and soft beige tones. They rest on a smooth, matte stone surface against a beautifully textured plaster wall. The soft, diffused natural lighting highlights the tactile surface of the soy wax, embodying a high-end, organic aesthetic that feels deeply calm, intentional, and perfectly suited for slow living spaces." src="assets/img/photo-14.png"/>
+</div>
+<div class="text-center">
+<h3 class="font-headline-md text-2xl text-deep-charcoal mb-2 font-medium">Pillar</h3>
+<p class="font-body-md text-body-md text-on-surface-variant group-hover:text-copper-bronze transition-colors duration-300">Architectural elegance.</p>
+</div>
+</a>
+<!-- Category 2: Glass -->
+<a class="group block relative overflow-hidden bg-light-cream border border-copper-bronze/50 hover:border-copper-bronze hover:shadow-lg hover:-translate-y-1 transition-all duration-500 p-4" data-reveal="" href="shop.html" style="--reveal-delay:120ms">
+<div class="aspect-[3/4] overflow-hidden mb-6 relative">
+<!-- Product Highlight Tag -->
+<span class="absolute top-2 right-2 z-20 bg-sage-green text-white font-label-caps text-[10px] px-2 py-1 rounded-full uppercase tracking-wider">Classic</span>
+<img alt="Glass Candles" class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" decoding="async" loading="lazy" data-alt="A close-up view of an elegant, amber-tinted glass jar candle resting on a polished wooden table. A delicate wisp of smoke trails upwards from the recently extinguished wick, suggesting a moment just passed. The background features a subtle, out-of-focus hint of a cozy living space. The lighting is moody and warm, reinforcing an atmosphere of quiet luxury, reflection, and artisanal craftsmanship." src="assets/img/photo-09.png"/>
+</div>
+<div class="text-center">
+<h3 class="font-headline-md text-2xl text-deep-charcoal mb-2 font-medium">Glass</h3>
+<p class="font-body-md text-body-md text-on-surface-variant group-hover:text-copper-bronze transition-colors duration-300">Timeless vessels.</p>
+</div>
+</a>
+<!-- Category 3: Scented -->
+<a class="group block relative overflow-hidden bg-light-cream border border-copper-bronze/50 hover:border-copper-bronze hover:shadow-lg hover:-translate-y-1 transition-all duration-500 p-4" data-reveal="" href="shop.html" style="--reveal-delay:240ms">
+<div class="aspect-[3/4] overflow-hidden mb-6 relative">
+<!-- Product Highlight Tag -->
+<span class="absolute top-2 left-2 z-20 bg-sage-green text-white font-label-caps text-[10px] px-2 py-1 rounded-full uppercase tracking-wider">Aromatic</span>
+<img alt="Scented Candles" class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" decoding="async" loading="lazy" data-alt="An intimate flat-lay composition showcasing a premium scented candle surrounded by raw botanical ingredients like dried lavender sprigs, crushed cardamom pods, and star anise. The elements are artfully scattered across a pristine linen cloth. The overhead, soft lighting casts gentle, low-contrast shadows, emphasizing the tactile quality of the natural materials and creating a sophisticated, organic, and sensory-rich visual experience." src="assets/img/photo-08.png"/>
+</div>
+<div class="text-center">
+<h3 class="font-headline-md text-2xl text-deep-charcoal mb-2 font-medium">Scented</h3>
+<p class="font-body-md text-body-md text-on-surface-variant group-hover:text-copper-bronze transition-colors duration-300">Botanical journeys.</p>
+</div>
+</a>
+</div>
+<div class="mt-12 text-center" data-reveal="">
+<a class="btn-sheen inline-flex items-center justify-center px-8 py-3 bg-transparent border border-copper-bronze text-copper-bronze font-label-caps text-label-caps rounded uppercase tracking-widest hover:bg-copper-bronze hover:text-white transition-colors duration-300 ease-in-out" href="shop.html">
+                    View All Products
+                </a>
+</div>
+</section>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="w-full mt-section-padding bg-light-cream border-t border-copper-bronze/30">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-mobile md:px-gutter py-12 max-w-container-max mx-auto">
+<!-- Brand Column -->
+<div class="flex flex-col items-center md:items-start text-center md:text-left mb-8 md:mb-0">
+<span class="font-headline-md text-headline-md text-copper-bronze mb-4 tracking-widest uppercase">Lumina</span>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xs">
+                    Artisanal soy wax candles hand-poured with intention to bring light, calm, and a gentle glow into your sanctuary.
+                </p>
+</div>
+<!-- Links Column -->
+<div class="flex flex-col items-center md:items-start text-center md:text-left mb-8 md:mb-0">
+<h4 class="font-label-caps text-label-caps text-deep-charcoal uppercase tracking-widest mb-6">Explore</h4>
+<nav class="flex flex-col gap-3 font-body-md text-body-md">
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="privacy.html">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="shipping-returns.html">Shipping &amp; Returns</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="wholesale.html">Wholesale Inquiry</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="story.html">Our Story</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="contact.html">Contact</a>
+</nav>
+</div>
+<!-- Newsletter / Contact Column -->
+<div class="flex flex-col items-center md:items-start text-center md:text-left">
+<h4 class="font-label-caps text-label-caps text-deep-charcoal uppercase tracking-widest mb-6">Join the Glow</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4">Subscribe for quiet updates and new scent releases.</p>
+<form class="w-full max-w-xs flex flex-col gap-4" data-form="" data-success="Subscribed — welcome to the glow.">
+<label class="sr-only" for="newsletter-email">Email address</label>
+<input class="w-full bg-transparent border-0 border-b border-copper-bronze focus:ring-0 focus:border-copper-bronze px-0 py-2 text-on-surface-variant placeholder-on-surface-variant/50 outline-none" id="newsletter-email" name="email" placeholder="Email Address" required="" type="email"/>
+<button class="btn-sheen w-full px-4 py-2 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" type="submit">Subscribe</button>
+</form>
+</div>
+</div>
+<!-- Copyright Row -->
+<div class="w-full border-t border-copper-bronze/10 py-6 text-center">
+<p class="font-body-md text-body-md text-copper-bronze">
+                © 2026 Lumina Artisanal Candles. Hand-poured with intention.
+            </p>
+</div>
+</footer>
+</body></html>

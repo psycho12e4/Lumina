@@ -1,0 +1,287 @@
+/* ==========================================================================
+   Lumina — shared site styles (animations, nav, toast, a11y)
+   ========================================================================== */
+
+:root {
+    --lumina-copper: #A8763E;
+    --lumina-almond: #E5D3B3;
+    --lumina-sage: #8B9D83;
+    --lumina-charcoal: #333333;
+    --lumina-cream: #FDFBF7;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Cross-fade between pages (progressive enhancement — Chrome/Safari) */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.35s;
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility
+   -------------------------------------------------------------------------- */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--lumina-copper);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Header / navigation
+   -------------------------------------------------------------------------- */
+
+#site-header.is-scrolled {
+    box-shadow: 0 2px 20px rgba(51, 51, 51, 0.08);
+}
+
+.nav-link {
+    position: relative;
+    padding-bottom: 4px;
+}
+
+.nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 1px;
+    width: 100%;
+    background: var(--lumina-copper);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s ease;
+}
+
+.nav-link:hover::after,
+.nav-link[aria-current="page"]::after {
+    transform: scaleX(1);
+}
+
+/* Mobile drawer — collapsed by default, slides open via .open */
+#mobile-nav {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.45s ease, opacity 0.35s ease;
+}
+
+#mobile-nav.open {
+    max-height: 420px;
+    opacity: 1;
+}
+
+/* No-JS fallback: keep the mobile menu reachable */
+html:not(.js) #mobile-nav {
+    max-height: none;
+    opacity: 1;
+}
+
+html:not(.js) #menu-toggle {
+    display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Shop filters
+   -------------------------------------------------------------------------- */
+
+[data-filter] {
+    padding-bottom: 4px;
+    border-bottom: 1px solid transparent;
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+[data-filter].filter-active {
+    color: var(--lumina-copper);
+    border-color: var(--lumina-copper);
+}
+
+/* --------------------------------------------------------------------------
+   Toast notification
+   -------------------------------------------------------------------------- */
+
+#toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translate(-50%, 200%);
+    background: var(--lumina-charcoal);
+    color: var(--lumina-cream);
+    padding: 0.75rem 1.75rem;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    border-radius: 2px;
+    box-shadow: 0 6px 24px rgba(51, 51, 51, 0.25);
+    transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+    z-index: 100;
+    pointer-events: none;
+    max-width: calc(100vw - 2.5rem);
+    text-align: center;
+}
+
+#toast.show {
+    transform: translate(-50%, 0);
+}
+
+/* --------------------------------------------------------------------------
+   Motion — all entrance animations respect prefers-reduced-motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+
+    /* Scroll-triggered reveal (elements marked with data-reveal).
+       Only hidden when JS is available to reveal them again.
+       Variants: data-reveal="left" | "right" | "zoom" (default: rise). */
+    html.js [data-reveal] {
+        opacity: 0;
+        transform: translateY(28px);
+        transition:
+            opacity 0.8s cubic-bezier(0.22, 0.61, 0.36, 1),
+            transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+        transition-delay: var(--reveal-delay, 0ms);
+        will-change: opacity, transform;
+    }
+
+    html.js [data-reveal="left"] {
+        transform: translateX(-36px);
+    }
+
+    html.js [data-reveal="right"] {
+        transform: translateX(36px);
+    }
+
+    html.js [data-reveal="zoom"] {
+        transform: scale(0.94);
+    }
+
+    html.js [data-reveal].is-visible {
+        opacity: 1;
+        transform: none;
+    }
+
+    /* Thin decorative divider draws itself in when revealed */
+    html.js .divider-draw {
+        transform: scaleX(0);
+        transition: transform 1s 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+
+    html.js [data-reveal].is-visible .divider-draw,
+    html.js .divider-draw.is-visible {
+        transform: scaleX(1);
+    }
+
+    /* Lazy images fade in as they finish loading */
+    html.js img.lazy-fade {
+        opacity: 0;
+        transition: opacity 0.7s ease;
+    }
+
+    html.js img.lazy-fade.loaded {
+        opacity: 1;
+    }
+
+    /* Candle-glow pulse for the hero call to action */
+    .glow-pulse {
+        animation: lumina-glow 3.2s ease-in-out infinite;
+    }
+
+    /* Cart badge pops when the count changes */
+    [data-cart-count].pop {
+        animation: lumina-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Slow, subtle hero background zoom */
+    .kenburns {
+        animation: lumina-kenburns 26s ease-in-out infinite alternate;
+    }
+
+    /* Hero content entrance, staggered */
+    .hero-rise {
+        animation: lumina-rise 1s 0.15s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    .hero-rise-2 {
+        animation: lumina-rise 1s 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    .hero-rise-3 {
+        animation: lumina-rise 1s 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+}
+
+@keyframes lumina-kenburns {
+    from { transform: scale(1); }
+    to { transform: scale(1.08); }
+}
+
+@keyframes lumina-rise {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes lumina-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(229, 211, 179, 0); }
+    50% { box-shadow: 0 0 28px 4px rgba(229, 211, 179, 0.45); }
+}
+
+@keyframes lumina-pop {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.5); }
+    100% { transform: scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   Button sheen — a soft light sweep across primary actions on hover
+   -------------------------------------------------------------------------- */
+
+.btn-sheen {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-sheen::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -80%;
+    width: 55%;
+    height: 100%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
+    pointer-events: none;
+}
+
+.btn-sheen:hover::before,
+.btn-sheen:focus-visible::before {
+    left: 130%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-sheen::before {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}

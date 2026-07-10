@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumina | Our Story</title>
+<meta content="A century of illumination — the story of Lumina's artisanal heritage and hand-poured candle craftsmanship." name="description"/>
+<!-- Social sharing meta — replace og:image with an absolute URL once the domain is live -->
+<meta content="Lumina | Our Story" property="og:title"/>
+<meta content="A century of illumination — the story of Lumina's artisanal heritage and hand-poured candle craftsmanship." property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="assets/img/photo-12.png" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<link href="assets/img/lumina-logo.png" rel="icon" type="image/png"/>
+<script>document.documentElement.classList.add('js');</script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@400;600;700&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&amp;family=Hanken+Grotesk:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        .fine-line-t { border-top: 1px solid rgba(168, 118, 62, 0.3); }
+        .fine-line-b { border-bottom: 1px solid rgba(168, 118, 62, 0.3); }
+        .fine-line-l { border-left: 1px solid rgba(168, 118, 62, 0.3); }
+        .fine-line-r { border-right: 1px solid rgba(168, 118, 62, 0.3); }
+    </style>
+<link href="assets/css/tailwind.css" rel="stylesheet"/>
+<link href="assets/css/site.css" rel="stylesheet"/>
+<script defer="" src="assets/js/main.js"></script>
+</head>
+<body class="bg-background text-on-surface antialiased flex flex-col min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="w-full top-0 z-50 bg-background/95 backdrop-blur border-b border-copper-bronze/30 sticky transition-shadow duration-300" id="site-header">
+<div class="flex flex-col items-center w-full px-margin-mobile md:px-gutter py-3 max-w-container-max mx-auto">
+<div class="flex items-center justify-between w-full">
+<button aria-controls="mobile-nav" aria-expanded="false" aria-label="Open menu" class="md:hidden p-2 -ml-2 text-copper-bronze hover:opacity-70 transition-opacity duration-300" id="menu-toggle">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+<a class="flex items-center gap-3 font-headline-md text-2xl md:text-headline-md text-copper-bronze uppercase tracking-widest transition-opacity duration-300 hover:opacity-80" href="index.html">
+<img alt="Lumina logo" class="w-16 h-16 md:w-20 md:h-20 object-contain" src="assets/img/lumina-logo.png"/>
+<span class="hidden sm:inline">Lumina</span>
+</a>
+<div class="flex items-center gap-1 text-copper-bronze ml-auto">
+<button aria-label="Open shopping bag" data-cart-toggle="" class="p-2 relative transition-opacity duration-300 hover:opacity-70">
+<span class="material-symbols-outlined text-2xl" data-icon="shopping_bag">shopping_bag</span>
+<span class="absolute top-0 right-0 bg-copper-bronze text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold" data-cart-count="">0</span>
+</button>
+</div>
+</div>
+<nav aria-label="Primary" class="hidden md:flex items-center justify-center gap-8 w-full pt-3 font-body-md text-body-md">
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="index.html">Home</a>
+<a aria-current="page" class="nav-link text-copper-bronze font-bold" href="story.html">Our Story</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="wax.html">Soya Wax Education</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="shop.html">Shop</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="gallery.html">Gallery</a>
+<a class="nav-link text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="contact.html">Contact</a>
+</nav>
+</div>
+<nav aria-label="Mobile" class="md:hidden w-full px-margin-mobile font-body-md text-body-md" id="mobile-nav">
+<div class="flex flex-col pb-4">
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="index.html">Home</a>
+<a aria-current="page" class="py-3 border-b border-copper-bronze/10 text-copper-bronze font-bold" href="story.html">Our Story</a>
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="wax.html">Soya Wax Education</a>
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="shop.html">Shop</a>
+<a class="py-3 border-b border-copper-bronze/10 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="gallery.html">Gallery</a>
+<a class="py-3 text-on-surface-variant hover:text-copper-bronze transition-colors duration-300" href="contact.html">Contact</a>
+</div>
+</nav>
+</header>
+<main class="flex-grow">
+<!-- Hero Section -->
+<section class="py-section-padding px-margin-mobile md:px-section-padding max-w-container-max mx-auto text-center relative">
+<h1 class="hero-rise font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-copper-bronze mb-6">A Century of Illumination</h1>
+<p class="hero-rise-2 font-subtitle-italic text-subtitle-italic text-on-surface-variant max-w-2xl mx-auto mb-12">Tracing the roots of Lumina's artisanal heritage, where every flame tells a story of craftsmanship and dedication.</p>
+<div class="hero-rise-3 relative w-full aspect-video md:aspect-[21/9] rounded-lg overflow-hidden border border-copper-bronze/20">
+<img alt="Historic candle-making workshop" class="w-full h-full object-cover grayscale-[20%] sepia-[10%]" data-alt="A cinematic, wide-angle shot of a historic candle-making workshop from the early 1900s. The room is warmly lit by natural sunlight filtering through dusty windows and dozens of flickering candles in various stages of completion. Wooden workbenches are covered in antique tools, hardened wax drippings, and copper melting pots. The color palette emphasizes rich, toasted almonds, deep earthy browns, and warm golden hues, embodying a rustic, tactile artisanal aesthetic." src="assets/img/photo-06.png"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80"></div>
+</div>
+</section>
+<!-- The Crandall Legacy -->
+<section class="py-section-padding px-margin-mobile md:px-section-padding max-w-container-max mx-auto border-t border-copper-bronze/30">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter items-center">
+<div class="order-2 md:order-1 p-8 border border-copper-bronze/20 bg-light-cream rounded-DEFAULT" data-reveal="left">
+<h2 class="font-headline-md text-headline-md text-copper-bronze mb-4">The Crandall Legacy</h2>
+<h3 class="font-subtitle-italic text-subtitle-italic text-on-surface-variant mb-6">Forged in the fires of 1924</h3>
+<p class="font-body-lg text-body-lg text-on-surface mb-6">What began as a modest endeavor in a small outbuilding has blossomed into a century-long tradition. Elias Crandall, an apothecary with a fascination for botany, sought to create a light source that didn't just illuminate a room, but enriched it.</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Through meticulous experimentation with early soya wax blends and essential oils, the foundation for Lumina was laid. The methods were rigorous, the tools were simple, but the intention was profound: to craft a domestic sanctuary through scent and light.</p>
+</div>
+<div class="order-1 md:order-2 relative h-96 md:h-full min-h-[400px]" data-reveal="right" style="--reveal-delay:120ms">
+<img alt="Antique journal with botanical sketches" class="absolute inset-0 w-full h-full object-cover rounded-DEFAULT border border-copper-bronze/20 filter sepia-[20%]" decoding="async" loading="lazy" data-alt="A close-up, highly detailed photograph of an open, weathered, antique leather-bound journal resting on a scarred wooden table. The pages are filled with elegant, faded cursive handwriting and hand-drawn botanical sketches of herbs and flowers. A tarnished brass magnifying glass and a simple, unlit taper candle in a copper holder sit beside it. The lighting is moody and focused, highlighting the texture of the paper and leather, creating a sense of historical gravitas and quiet luxury." src="assets/img/photo-02.png"/>
+</div>
+</div>
+</section>
+<!-- Artisanal Heritage (Bento Grid) -->
+<section class="py-section-padding px-margin-mobile md:px-section-padding max-w-container-max mx-auto border-t border-copper-bronze/30">
+<div class="text-center mb-12" data-reveal="">
+<h2 class="font-headline-md text-headline-md text-copper-bronze mb-4">Artisanal Heritage</h2>
+<p class="font-subtitle-italic text-subtitle-italic text-on-surface-variant">The tools, the hands, the enduring craft.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:auto-rows-[300px]">
+<!-- Bento Item 1 (Large) -->
+<div class="md:col-span-2 md:row-span-2 relative group overflow-hidden border border-copper-bronze/20 rounded-DEFAULT bg-light-cream" data-reveal="">
+<img alt="Hands pouring molten soya wax into glass jars" class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" decoding="async" loading="lazy" data-alt="A macro shot of a pair of hands carefully pouring molten, creamy white soya wax from a heavily patinated copper pitcher into an array of glass jars. The wax is caught mid-pour, forming a perfect, translucent amber stream. The background is softly blurred, showing glimpses of drying herbs and wooden shelves. The lighting is warm and directional, emphasizing the smooth texture of the wax and the artisanal skill of the maker." src="assets/img/photo-07.png"/>
+<div class="absolute inset-0 bg-gradient-to-t from-deep-charcoal/80 to-transparent p-8 flex flex-col justify-end">
+<span class="font-label-caps text-label-caps text-toasted-almond mb-2 uppercase tracking-widest">The Process</span>
+<h3 class="font-headline-md text-headline-md text-light-cream">Hand-Poured with Intention</h3>
+</div>
+</div>
+<!-- Bento Item 2 -->
+<div class="relative group overflow-hidden border border-copper-bronze/20 rounded-DEFAULT bg-surface-container-low p-8 flex flex-col justify-center" data-reveal="" style="--reveal-delay:120ms">
+<span class="material-symbols-outlined text-4xl text-copper-bronze mb-4" data-icon="local_florist" data-weight="fill">local_florist</span>
+<h3 class="font-headline-md text-headline-md text-copper-bronze mb-2 text-xl">Botanical Roots</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">We source our fragrances from organic, heritage gardens, ensuring every scent is grounded in nature.</p>
+</div>
+<!-- Bento Item 3 -->
+<div class="relative group overflow-hidden border border-copper-bronze/20 rounded-DEFAULT bg-surface-container-low p-8 flex flex-col justify-center" data-reveal="" style="--reveal-delay:240ms">
+<span class="material-symbols-outlined text-4xl text-copper-bronze mb-4" data-icon="clock_loader_40" data-weight="fill">clock_loader_40</span>
+<h3 class="font-headline-md text-headline-md text-copper-bronze mb-2 text-xl">Slow Curing</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Time is our vital ingredient. Each candle rests for weeks to ensure optimal scent throw and an even burn.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="w-full mt-section-padding bg-light-cream border-t border-copper-bronze/30">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-mobile md:px-gutter py-12 max-w-container-max mx-auto">
+<!-- Brand Column -->
+<div class="flex flex-col items-center md:items-start text-center md:text-left mb-8 md:mb-0">
+<span class="font-headline-md text-headline-md text-copper-bronze mb-4 tracking-widest uppercase">Lumina</span>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xs">
+                    Artisanal soy wax candles hand-poured with intention to bring light, calm, and a gentle glow into your sanctuary.
+                </p>
+</div>
+<!-- Links Column -->
+<div class="flex flex-col items-center md:items-start text-center md:text-left mb-8 md:mb-0">
+<h4 class="font-label-caps text-label-caps text-deep-charcoal uppercase tracking-widest mb-6">Explore</h4>
+<nav class="flex flex-col gap-3 font-body-md text-body-md">
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="privacy.html">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="shipping-returns.html">Shipping &amp; Returns</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="wholesale.html">Wholesale Inquiry</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="story.html">Our Story</a>
+<a class="text-on-surface-variant hover:text-copper-bronze transition-colors duration-300 underline-offset-4 hover:underline" href="contact.html">Contact</a>
+</nav>
+</div>
+<!-- Newsletter Column -->
+<div class="flex flex-col items-center md:items-start text-center md:text-left">
+<h4 class="font-label-caps text-label-caps text-deep-charcoal uppercase tracking-widest mb-6">Join the Glow</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4">Subscribe for quiet updates and new scent releases.</p>
+<form class="w-full max-w-xs flex flex-col gap-4" data-form="" data-success="Subscribed — welcome to the glow.">
+<label class="sr-only" for="newsletter-email">Email address</label>
+<input class="w-full bg-transparent border-0 border-b border-copper-bronze focus:ring-0 focus:border-copper-bronze px-0 py-2 text-on-surface-variant placeholder-on-surface-variant/50 outline-none" id="newsletter-email" name="email" placeholder="Email Address" required="" type="email"/>
+<button class="btn-sheen w-full px-4 py-2 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" type="submit">Subscribe</button>
+</form>
+</div>
+</div>
+<!-- Copyright Row -->
+<div class="w-full border-t border-copper-bronze/10 py-6 text-center">
+<p class="font-body-md text-body-md text-copper-bronze">
+                © 2026 Lumina Artisanal Candles. Hand-poured with intention.
+            </p>
+</div>
+</footer>
+</body></html>
