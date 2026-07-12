@@ -253,8 +253,8 @@
             '<input class="' + fieldClass + '" id="co-name" name="name" required type="text" autocomplete="name" placeholder="Aarav Sharma"/></div>' +
             '<div><label class="' + labelClass + '" for="co-phone">Mobile number *</label>' +
             '<input class="' + fieldClass + '" id="co-phone" name="phone" required type="tel" autocomplete="tel" pattern="[0-9+()\\- ]{7,15}" placeholder="+91 98765 43210"/></div>' +
-            '<div><label class="' + labelClass + '" for="co-email">Email</label>' +
-            '<input class="' + fieldClass + '" id="co-email" name="email" type="email" autocomplete="email" placeholder="you@example.com"/></div>' +
+            '<div><label class="' + labelClass + '" for="co-email">Email *</label>' +
+            '<input class="' + fieldClass + '" id="co-email" name="email" required type="email" autocomplete="email" placeholder="you@example.com"/></div>' +
             '<div><label class="' + labelClass + '" for="co-address">Delivery address</label>' +
             '<textarea class="' + fieldClass + '" id="co-address" name="address" rows="2" autocomplete="street-address" placeholder="House, street, city, PIN"></textarea></div>' +
             '<p class="font-body-md text-sm text-error hidden" data-details-error=""></p>' +
@@ -277,7 +277,7 @@
             fetch("/api/otp/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone: customer.phone })
+                body: JSON.stringify({ email: customer.email })
             }).then(function (res) {
                 return res.json().then(function (data) { return { ok: res.ok, data: data }; });
             }).then(function (result) {
@@ -297,8 +297,8 @@
         body.innerHTML =
             '<div class="mb-5 px-4 py-3 bg-toasted-almond/40 border border-copper-bronze/30 font-body-md text-sm text-deep-charcoal">' +
             (testMode
-                ? '<strong>TEST MODE</strong> — no SMS sent. Check the server console for your 6-digit code.'
-                : 'A 6-digit code was sent to <strong>' + customer.phone + '</strong>. It expires in 10 minutes.') +
+                ? '<strong>TEST MODE</strong> — check the server console for the Ethereal preview link with your 6-digit code.'
+                : 'A 6-digit code was sent to <strong>' + customer.email + '</strong>. It expires in 10 minutes.') +
             '</div>' +
             '<form class="flex flex-col gap-4" data-checkout-otp="">' +
             '<div><label class="' + labelClass + '" for="co-otp">Verification code *</label>' +
@@ -319,7 +319,7 @@
             fetch("/api/otp/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone: customer.phone })
+                body: JSON.stringify({ email: customer.email })
             }).then(function (res) { return res.json(); }).then(function (data) {
                 resendBtn.disabled = false;
                 resendBtn.textContent = "Resend code";
@@ -342,7 +342,7 @@
             fetch("/api/otp/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone: customer.phone, code: form.otp.value.trim() })
+                body: JSON.stringify({ email: customer.email, code: form.otp.value.trim() })
             }).then(function (res) {
                 return res.json().then(function (data) { return { ok: res.ok, data: data }; });
             }).then(function (result) {

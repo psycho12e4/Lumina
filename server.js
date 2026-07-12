@@ -14,6 +14,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
+const nodemailer = require("nodemailer");
 
 const ROOT = __dirname;
 const UPLOAD_DIR = process.env.LUMINA_DATA_DIR
@@ -31,8 +32,38 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 /* ---- Helpers ---- */
 
 const adminTokens = new Set();
-/* phone verification tokens: token → {phone, expiresAt} */
-const verifiedPhones = new Map();
+/* email verification tokens: token → {email, expiresAt} */
+const verifiedEmails = new Map();
+
+function makeMailTransport() {
+    if (process.env.SMTP_HOST) {
+        return nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || "587", 10),
+            secure: process.env.SMTP_SECURE === "true",
+            auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        });
+    }
+    /* Ethereal test account — credentials printed to console on first use */
+    return null;
+}
+let _transport = null;
+async function getTransport() {
+    if (_transport) return _transport;
+    if (process.env.SMTP_HOST) {
+        _transport = makeMailTransport();
+        return _transport;
+    }
+    const testAccount = await nodemailer.createTestAccount();
+    _transport = nodemailer.createTransport({
+        host: testAccount.smtp.host,
+        port: testAccount.smtp.port,
+        secure: testAccount.smtp.secure,
+        auth: { user: testAccount.user, pass: testAccount.pass }
+    });
+    console.log("[EMAIL TEST] Ethereal preview account: " + testAccount.user);
+    return _transport;
+}
 
 function json(res, status, body) {
     const text = JSON.stringify(body);
@@ -178,12 +209,13 @@ async function handleApi(req, res, pathname) {
         if (!name || !phone) return json(res, 400, { error: "Name and mobile number are required." });
         if (!Array.isArray(body.items) || !body.items.length) return json(res, 400, { error: "Your bag is empty." });
 
-        /* Phone must have been verified in the last 30 min */
-        const vt = body.verificationToken ? verifiedPhones.get(body.verificationToken) : null;
-        if (!vt || vt.phone !== phone || vt.expiresAt < Date.now()) {
-            return json(res, 403, { error: "Phone number not verified. Please complete OTP verification." });
+        /* Email must have been verified in the last 30 min */
+        const customerEmail = String(customer.email || "").trim().toLowerCase();
+        const vt = body.verificationToken ? verifiedEmails.get(body.verificationToken) : null;
+        if (!vt || vt.email !== customerEmail || vt.expiresAt < Date.now()) {
+            return json(res, 403, { error: "Email address not verified. Please complete email verification." });
         }
-        verifiedPhones.delete(body.verificationToken); /* single-use */
+        verifiedEmails.delete(body.verificationToken); /* single-use */
 
         /* resolve items against the catalog */
         const ids = body.items.map(function (i) { return i.id; }).filter(Boolean);
@@ -261,54 +293,48 @@ async function handleApi(req, res, pathname) {
 
     if (pathname === "/api/otp/send" && method === "POST") {
         const body = await readBody(req);
-        const phone = String(body.phone || "").trim();
-        if (!/^[0-9+()\- ]{7,15}$/.test(phone)) {
-            return json(res, 400, { error: "Please enter a valid mobile number." });
+        const email = String(body.email || "").trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return json(res, 400, { error: "Please enter a valid email address." });
         }
         const code = String(Math.floor(100000 + Math.random() * 900000));
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); /* 10 min */
 
-        /* Delete any previous unused OTPs for this phone */
-        await supabase.from("otp_verifications").delete().eq("phone", phone).eq("verified", false);
-
-        const { error } = await supabase.from("otp_verifications").insert({ phone, code, expires_at: expiresAt });
+        await supabase.from("email_verifications").delete().eq("email", email).eq("verified", false);
+        const { error } = await supabase.from("email_verifications").insert({ email, code, expires_at: expiresAt });
         if (error) return dbErr(res, error);
 
-        /* In production set SMS_PROVIDER_URL and it will POST {phone, code} there.
-           In test mode the code is printed to the server console. */
-        if (process.env.SMS_PROVIDER_URL) {
-            try {
-                const https = require("https");
-                const payload = JSON.stringify({ phone, code });
-                const url = new URL(process.env.SMS_PROVIDER_URL);
-                const options = {
-                    hostname: url.hostname, port: url.port || 443, path: url.pathname,
-                    method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
-                };
-                await new Promise(function (resolve) {
-                    const r = https.request(options, resolve);
-                    r.on("error", resolve);
-                    r.write(payload);
-                    r.end();
-                });
-            } catch (e) { console.error("SMS send error:", e.message); }
-        } else {
-            console.log("[TEST OTP] Phone: " + phone + "  Code: " + code + "  (expires in 10 min)");
+        const transport = await getTransport();
+        const info = await transport.sendMail({
+            from: process.env.SMTP_FROM || '"Lumina Candles" <noreply@lumina.store>',
+            to: email,
+            subject: "Your Lumina verification code",
+            text: "Your verification code is: " + code + "\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.",
+            html: '<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#faf8f5;border:1px solid #e8d8c4;">' +
+                '<h2 style="color:#A8763E;letter-spacing:.1em;font-size:22px;margin:0 0 16px">Lumina</h2>' +
+                '<p style="color:#333;font-size:16px;margin:0 0 8px">Your verification code is:</p>' +
+                '<div style="font-size:40px;font-weight:bold;letter-spacing:.3em;color:#333;padding:20px 0;">' + code + '</div>' +
+                '<p style="color:#888;font-size:13px;margin:16px 0 0">Expires in 10 minutes. If you didn\'t request this, ignore this email.</p></div>'
+        });
+
+        const testMode = !process.env.SMTP_HOST;
+        if (testMode) {
+            console.log("[EMAIL OTP] To: " + email + "  Code: " + code + "  Preview: " + nodemailer.getTestMessageUrl(info));
         }
 
-        return json(res, 200, { ok: true, testMode: !process.env.SMS_PROVIDER_URL });
+        return json(res, 200, { ok: true, testMode });
     }
 
     if (pathname === "/api/otp/verify" && method === "POST") {
         const body = await readBody(req);
-        const phone = String(body.phone || "").trim();
+        const email = String(body.email || "").trim().toLowerCase();
         const code = String(body.code || "").trim();
-        if (!phone || !code) return json(res, 400, { error: "Phone and code are required." });
+        if (!email || !code) return json(res, 400, { error: "Email and code are required." });
 
         const { data: row, error } = await supabase
-            .from("otp_verifications")
+            .from("email_verifications")
             .select("*")
-            .eq("phone", phone)
+            .eq("email", email)
             .eq("code", code)
             .eq("verified", false)
             .gt("expires_at", new Date().toISOString())
@@ -319,11 +345,10 @@ async function handleApi(req, res, pathname) {
         if (error) return dbErr(res, error);
         if (!row) return json(res, 400, { error: "Invalid or expired code. Please request a new one." });
 
-        await supabase.from("otp_verifications").update({ verified: true }).eq("id", row.id);
+        await supabase.from("email_verifications").update({ verified: true }).eq("id", row.id);
 
         const token = crypto.randomBytes(24).toString("hex");
-        /* Store the verified token so the order endpoint can check it */
-        verifiedPhones.set(token, { phone, expiresAt: Date.now() + 30 * 60 * 1000 });
+        verifiedEmails.set(token, { email, expiresAt: Date.now() + 30 * 60 * 1000 });
         return json(res, 200, { ok: true, verificationToken: token });
     }
 
