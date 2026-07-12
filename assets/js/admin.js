@@ -5,7 +5,7 @@
     "use strict";
 
     var TOKEN_KEY = "lumina-admin-token";
-    var state = { products: [], orders: [], subscribers: [], revenue: 0 };
+    var state = { products: [], orders: [], subscribers: [], revenue: 0, reviews: [] };
     var activeTab = "overview";
     var pollTimer = null;
 
@@ -98,8 +98,11 @@
     }
 
     function refresh(renderProductsToo) {
-        return api("/api/admin/summary").then(function (data) {
-            state = data;
+        return Promise.all([
+            api("/api/admin/summary"),
+            api("/api/admin/reviews")
+        ]).then(function (results) {
+            state = Object.assign({}, results[0], { reviews: results[1].reviews || [] });
             renderBadges();
             if (activeTab === "products" && !renderProductsToo) return; /* don't wipe in-progress edits */
             renderTab(activeTab);
@@ -123,7 +126,8 @@
     });
 
     function renderBadges() {
-        var badges = { orders: state.orders.length, newsletter: state.subscribers.length };
+        var pendingReviews = state.reviews.filter(function (r) { return r.status === "pending"; }).length;
+        var badges = { orders: state.orders.length, newsletter: state.subscribers.length, reviews: pendingReviews };
         Object.keys(badges).forEach(function (key) {
             var el = document.querySelector('[data-badge="' + key + '"]');
             if (el) {
@@ -142,6 +146,7 @@
         if (name === "orders") renderOrders();
         if (name === "products") renderProducts();
         if (name === "newsletter") renderNewsletter();
+        if (name === "reviews") renderReviews();
     }
 
     /* ---- overview ---- */
@@ -285,12 +290,18 @@
     }
 
     function productRowHtml(p) {
-        return '<div class="bg-light-cream border border-copper-bronze/20 px-5 py-5 flex flex-col md:flex-row gap-5" data-product-row="' + escapeHtml(p.id) + '">' +
-            /* photo + change */
+        var images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
+        var colors = Array.isArray(p.colors) ? p.colors : [];
+        return '<div class="bg-light-cream border border-copper-bronze/20 px-5 py-5 flex flex-col md:flex-row gap-5" data-product-row="' + escapeHtml(p.id) + '" data-images=\'' + escapeHtml(JSON.stringify(images)) + '\' data-colors=\'' + escapeHtml(JSON.stringify(colors)) + '\'>' +
+            /* photos + add */
             '<div class="flex flex-col items-center gap-2 shrink-0">' +
-            '<div class="w-28 h-32 bg-surface-container-low border border-copper-bronze/10" style="background-image:url(\'' + escapeHtml(p.image) + '\');background-size:cover;background-position:center" data-photo-preview=""></div>' +
-            '<label class="cursor-pointer font-label-caps text-[10px] text-copper-bronze uppercase tracking-widest hover:underline">Change photo' +
-            '<input accept="image/*" class="hidden" data-photo-input="" type="file"/></label></div>' +
+            '<div class="flex flex-wrap gap-2 w-28" data-photo-list="">' +
+            images.map(function (img, i) {
+                return '<div class="relative w-12 h-14 bg-surface-container-low border border-copper-bronze/10" style="background-image:url(\'' + escapeHtml(img) + '\');background-size:cover;background-position:center">' +
+                    '<button class="absolute -top-1 -right-1 w-4 h-4 bg-deep-charcoal text-white text-[10px] leading-none rounded-full" data-remove-photo="' + i + '" aria-label="Remove photo">×</button></div>';
+            }).join("") + "</div>" +
+            '<label class="cursor-pointer font-label-caps text-[10px] text-copper-bronze uppercase tracking-widest hover:underline">Add photos' +
+            '<input accept="image/*" class="hidden" data-photo-input="" multiple="" type="file"/></label></div>' +
             /* fields */
             '<div class="flex-grow grid sm:grid-cols-2 gap-4">' +
             fieldHtml("Name", '<input class="admin-field" data-field="name" type="text" value="' + escapeHtml(p.name) + '"/>') +
@@ -299,6 +310,11 @@
             fieldHtml("Categories", '<div class="flex gap-4 pt-2">' + CATEGORIES.map(function (c) {
                 return '<label class="flex items-center gap-1 font-body-md text-sm text-on-surface-variant"><input class="rounded border-copper-bronze/50 text-copper-bronze focus:ring-copper-bronze" data-category-box="' + c + '" type="checkbox"' + (p.categories.indexOf(c) !== -1 ? " checked" : "") + "/>" + c + "</label>";
             }).join("") + "</div>") +
+            '<div class="sm:col-span-2">' +
+            '<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Colors</label>' +
+            '<div class="flex flex-wrap gap-3 pt-2" data-color-list=""></div>' +
+            '<button class="mt-2 font-label-caps text-[10px] text-copper-bronze uppercase tracking-widest hover:underline" data-add-color="" type="button">+ Add color</button>' +
+            "</div>" +
             "</div>" +
             /* stock + status + actions */
             '<div class="flex md:flex-col items-center md:items-end justify-between gap-4 shrink-0">' +
@@ -318,6 +334,39 @@
             "</div></div></div></div>";
     }
 
+    function colorRowHtml(color, index) {
+        color = color || {};
+        return '<div class="flex items-center gap-2 border border-copper-bronze/20 bg-background px-2 py-1" data-color-row="' + index + '">' +
+            '<input class="w-8 h-8 border-0 p-0 cursor-pointer" data-color-hex="" type="color" value="' + escapeHtml(color.hex || "#a8763e") + '"/>' +
+            '<input class="admin-field w-24 text-sm" data-color-name="" placeholder="Ivory" type="text" value="' + escapeHtml(color.name || "") + '"/>' +
+            '<label class="cursor-pointer font-label-caps text-[9px] text-copper-bronze uppercase tracking-widest hover:underline">Photo' +
+            '<input accept="image/*" class="hidden" data-color-photo-input="" type="file"/></label>' +
+            '<button class="text-on-surface-variant hover:text-error text-sm" data-remove-color="" type="button" aria-label="Remove color">×</button>' +
+            '</div>';
+    }
+
+    function renderColorList(row, colors) {
+        row.setAttribute("data-colors", JSON.stringify(colors));
+        var list = row.querySelector("[data-color-list]");
+        list.innerHTML = colors.map(colorRowHtml).join("");
+        list.querySelectorAll("[data-color-row]").forEach(function (colorRow) {
+            var idx = parseInt(colorRow.getAttribute("data-color-row"), 10);
+            colorRow.querySelector("[data-remove-color]").addEventListener("click", function () {
+                colors.splice(idx, 1);
+                renderColorList(row, colors);
+            });
+            colorRow.querySelector("[data-color-photo-input]").addEventListener("change", function (event) {
+                var file = event.target.files[0];
+                if (!file) return;
+                uploadImage(file, (colors[idx].name || "color")).then(function (path) {
+                    colors[idx].image = path;
+                    row.setAttribute("data-colors", JSON.stringify(colors));
+                    showToast("Color photo attached — click Save to apply");
+                }).catch(function (err) { showToast(err.message); });
+            });
+        });
+    }
+
     function fieldHtml(label, control) {
         return '<div><label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">' + label + "</label>" + control + "</div>";
     }
@@ -331,14 +380,56 @@
             price: parseFloat(row.querySelector('[data-field="price"]').value) || 0,
             tag: row.querySelector('[data-field="tag"]').value,
             stock: Math.max(0, parseInt(row.querySelector('[data-field="stock"]').value, 10) || 0),
-            categories: categories.length ? categories : ["glass"]
+            categories: categories.length ? categories : ["glass"],
+            images: rowImages(row),
+            colors: rowColors(row)
         };
+    }
+
+    function rowImages(row) { return JSON.parse(row.getAttribute("data-images") || "[]"); }
+
+    function rowColors(row) {
+        var stored = JSON.parse(row.getAttribute("data-colors") || "[]");
+        var rows = row.querySelectorAll("[data-color-row]");
+        if (!rows.length) return stored;
+        return Array.prototype.map.call(rows, function (colorRow) {
+            var idx = parseInt(colorRow.getAttribute("data-color-row"), 10);
+            return {
+                name: colorRow.querySelector("[data-color-name]").value.trim(),
+                hex: colorRow.querySelector("[data-color-hex]").value,
+                image: (stored[idx] || {}).image
+            };
+        }).filter(function (c) { return c.name; });
+    }
+
+    function renderPhotoList(row, images) {
+        var list = row.querySelector("[data-photo-list]");
+        list.innerHTML = images.map(function (img, i) {
+            return '<div class="relative w-12 h-14 bg-surface-container-low border border-copper-bronze/10" style="background-image:url(\'' + img + '\');background-size:cover;background-position:center">' +
+                '<button class="absolute -top-1 -right-1 w-4 h-4 bg-deep-charcoal text-white text-[10px] leading-none rounded-full" data-remove-photo="' + i + '" aria-label="Remove photo">×</button></div>';
+        }).join("");
+        list.querySelectorAll("[data-remove-photo]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                images.splice(parseInt(btn.getAttribute("data-remove-photo"), 10), 1);
+                row.setAttribute("data-images", JSON.stringify(images));
+                renderPhotoList(row, images);
+            });
+        });
     }
 
     function bindProductRow(el, product) {
         var row = el.querySelector('[data-product-row="' + product.id + '"]');
         if (!row) return;
         var stockInput = row.querySelector('[data-field="stock"]');
+        var colors = rowColors(row);
+        renderColorList(row, colors);
+
+        row.querySelector("[data-add-color]").addEventListener("click", function () {
+            colors.push({ name: "", hex: "#a8763e" });
+            renderColorList(row, colors);
+        });
+
+        renderPhotoList(row, rowImages(row));
 
         row.querySelector("[data-stock-minus]").addEventListener("click", function () {
             stockInput.value = Math.max(0, (parseInt(stockInput.value, 10) || 0) - 1);
@@ -370,14 +461,17 @@
         });
 
         row.querySelector("[data-photo-input]").addEventListener("change", function (event) {
-            var file = event.target.files[0];
-            if (!file) return;
-            uploadImage(file, product.name).then(function (path) {
-                return api("/api/admin/products/" + product.id, { method: "PUT", body: JSON.stringify({ image: path }) });
-            }).then(function (data) {
-                row.querySelector("[data-photo-preview]").style.backgroundImage = "url('" + data.product.image + "')";
-                showToast("Photo updated — live on the shop");
-            }).catch(function (err) { showToast(err.message); });
+            var files = Array.prototype.slice.call(event.target.files);
+            if (!files.length) return;
+            Promise.all(files.map(function (file) { return uploadImage(file, product.name); }))
+                .then(function (paths) {
+                    var images = rowImages(row).concat(paths);
+                    row.setAttribute("data-images", JSON.stringify(images));
+                    renderPhotoList(row, images);
+                    return api("/api/admin/products/" + product.id, { method: "PUT", body: JSON.stringify({ images: images }) });
+                })
+                .then(function () { showToast("Photos updated — live on the shop"); })
+                .catch(function (err) { showToast(err.message); });
         });
 
         function saveRow() {
@@ -414,20 +508,57 @@
             fieldHtml("Categories", '<div class="flex gap-4 pt-2">' + CATEGORIES.map(function (c) {
                 return '<label class="flex items-center gap-1 font-body-md text-sm text-on-surface-variant"><input class="rounded border-copper-bronze/50 text-copper-bronze focus:ring-copper-bronze" name="cat-' + c + '" type="checkbox"' + (c === "glass" ? " checked" : "") + "/>" + c + "</label>";
             }).join("") + "</div>") +
-            fieldHtml("Photo", '<input accept="image/*" class="block pt-2 font-body-md text-sm text-on-surface-variant" name="photo" type="file"/>') +
+            fieldHtml("Photos", '<input accept="image/*" class="block pt-2 font-body-md text-sm text-on-surface-variant" multiple="" name="photos" type="file"/>') +
+            '<div class="sm:col-span-2">' +
+            '<label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Colors</label>' +
+            '<div class="flex flex-wrap gap-3 pt-2" data-new-color-list=""></div>' +
+            '<button class="mt-2 font-label-caps text-[10px] text-copper-bronze uppercase tracking-widest hover:underline" data-add-new-color="" type="button">+ Add color</button>' +
+            "</div>" +
             "</div>" +
             '<button class="btn-sheen px-8 py-3 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" type="submit">Create Product</button></form>';
     }
 
     function bindAddForm(wrap) {
-        wrap.querySelector("[data-new-product]").addEventListener("submit", function (event) {
+        var form = wrap.querySelector("[data-new-product]");
+        var newColors = [];
+
+        function renderNewColorList() {
+            var list = form.querySelector("[data-new-color-list]");
+            list.innerHTML = newColors.map(colorRowHtml).join("");
+            list.querySelectorAll("[data-color-row]").forEach(function (colorRow) {
+                var idx = parseInt(colorRow.getAttribute("data-color-row"), 10);
+                colorRow.querySelector("[data-remove-color]").addEventListener("click", function () {
+                    newColors.splice(idx, 1);
+                    renderNewColorList();
+                });
+                colorRow.querySelector("[data-color-photo-input]").addEventListener("change", function (event) {
+                    var file = event.target.files[0];
+                    if (!file) return;
+                    uploadImage(file, (newColors[idx].name || "color")).then(function (path) {
+                        newColors[idx].image = path;
+                        showToast("Color photo attached");
+                    }).catch(function (err) { showToast(err.message); });
+                });
+            });
+        }
+        form.querySelector("[data-add-new-color]").addEventListener("click", function () {
+            newColors.push({ name: "", hex: "#a8763e" });
+            renderNewColorList();
+        });
+
+        form.addEventListener("submit", function (event) {
             event.preventDefault();
-            var form = event.target;
             if (!form.reportValidity()) return;
             var categories = CATEGORIES.filter(function (c) { return form["cat-" + c].checked; });
-            var file = form.photo.files[0];
-            var imagePromise = file ? uploadImage(file, form.name.value) : Promise.resolve(undefined);
-            imagePromise.then(function (imagePath) {
+            var files = Array.prototype.slice.call(form.photos.files);
+            var colors = newColors
+                .map(function (c, i) {
+                    var row = form.querySelectorAll("[data-color-row]")[i];
+                    return { name: row.querySelector("[data-color-name]").value.trim(), hex: row.querySelector("[data-color-hex]").value, image: c.image };
+                })
+                .filter(function (c) { return c.name; });
+            var imagesPromise = files.length ? Promise.all(files.map(function (f) { return uploadImage(f, form.name.value); })) : Promise.resolve([]);
+            imagesPromise.then(function (images) {
                 return api("/api/admin/products", {
                     method: "POST",
                     body: JSON.stringify({
@@ -436,7 +567,8 @@
                         stock: form.stock.value,
                         tag: form.tag.value,
                         categories: categories,
-                        image: imagePath
+                        images: images,
+                        colors: colors
                     })
                 });
             }).then(function (data) {
@@ -466,6 +598,70 @@
                         td(formatDate(s.date)) + "</tr>";
                 }).join("") +
                 "</tbody></table></div>");
+    }
+
+    /* ---- reviews ---- */
+
+    function renderReviews() {
+        var el = section("reviews");
+        var sorted = state.reviews.slice().sort(function (a, b) {
+            if (a.status === b.status) return new Date(b.created_at) - new Date(a.created_at);
+            return a.status === "pending" ? -1 : 1;
+        });
+        el.innerHTML =
+            '<h2 class="font-headline-md text-headline-md text-deep-charcoal mb-2">Reviews</h2>' +
+            '<p class="font-body-md text-body-md text-on-surface-variant mb-8">Approve reviews to publish them on the product page. Pending reviews are hidden from customers.</p>' +
+            (!sorted.length
+                ? '<p class="font-body-md text-body-md text-on-surface-variant py-12 text-center border border-copper-bronze/20 bg-light-cream">No reviews yet.</p>'
+                : '<div class="flex flex-col gap-4">' + sorted.map(reviewRowHtml).join("") + "</div>");
+
+        sorted.forEach(function (r) { bindReviewRow(el, r); });
+    }
+
+    function reviewRowHtml(r) {
+        var product = state.products.filter(function (p) { return p.id === r.product_id; })[0];
+        var starsHtml = "";
+        for (var i = 1; i <= 5; i++) {
+            starsHtml += '<span class="material-symbols-outlined text-base text-copper-bronze" style="font-variation-settings:\'FILL\' ' + (i <= r.rating ? 1 : 0) + '">star</span>';
+        }
+        return '<div class="bg-light-cream border border-copper-bronze/20 px-6 py-5" data-review-row="' + escapeHtml(r.id) + '">' +
+            '<div class="flex flex-wrap items-start justify-between gap-4 mb-3">' +
+            '<div><p class="font-headline-md text-[18px] text-deep-charcoal">' + escapeHtml(product ? product.name : r.product_id) + "</p>" +
+            '<div class="flex items-center gap-1 mt-1">' + starsHtml + "</div></div>" +
+            (r.status === "approved"
+                ? '<span class="inline-block bg-sage-green text-white font-label-caps text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">Approved</span>'
+                : '<span class="inline-block bg-copper-bronze text-white font-label-caps text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">Pending</span>') +
+            "</div>" +
+            (r.title ? '<p class="font-headline-md text-[16px] text-deep-charcoal mb-1">' + escapeHtml(r.title) + "</p>" : "") +
+            '<p class="font-body-md text-body-md text-on-surface-variant mb-3">' + escapeHtml(r.body) + "</p>" +
+            '<p class="font-label-caps text-[10px] text-on-surface-variant/70 uppercase tracking-widest mb-4">' + escapeHtml(r.name) + " · Order " + escapeHtml(r.order_id) + " · " + formatDate(r.created_at) + "</p>" +
+            '<div class="flex gap-2">' +
+            (r.status !== "approved" ? '<button class="btn-sheen px-5 py-2 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" data-approve-review="">Approve</button>' : '<button class="px-5 py-2 border border-copper-bronze/40 text-on-surface-variant font-label-caps text-label-caps uppercase tracking-widest hover:border-copper-bronze" data-unapprove-review="">Unpublish</button>') +
+            '<button class="px-2 py-2 text-on-surface-variant hover:text-error transition-colors" aria-label="Delete review" data-delete-review=""><span class="material-symbols-outlined">delete</span></button>' +
+            "</div></div>";
+    }
+
+    function bindReviewRow(el, r) {
+        var row = el.querySelector('[data-review-row="' + r.id + '"]');
+        if (!row) return;
+        var approveBtn = row.querySelector("[data-approve-review]");
+        if (approveBtn) approveBtn.addEventListener("click", function () {
+            api("/api/admin/reviews/" + r.id, { method: "PUT", body: JSON.stringify({ status: "approved" }) })
+                .then(function () { showToast("Review approved — now live"); refresh(true); })
+                .catch(function (err) { showToast(err.message); });
+        });
+        var unapproveBtn = row.querySelector("[data-unapprove-review]");
+        if (unapproveBtn) unapproveBtn.addEventListener("click", function () {
+            api("/api/admin/reviews/" + r.id, { method: "PUT", body: JSON.stringify({ status: "pending" }) })
+                .then(function () { showToast("Review unpublished"); refresh(true); })
+                .catch(function (err) { showToast(err.message); });
+        });
+        row.querySelector("[data-delete-review]").addEventListener("click", function () {
+            if (!confirm("Delete this review permanently?")) return;
+            api("/api/admin/reviews/" + r.id, { method: "DELETE" })
+                .then(function () { showToast("Review deleted"); refresh(true); })
+                .catch(function (err) { showToast(err.message); });
+        });
     }
 
     /* ---- shared input styling (applied via a tiny stylesheet so the strings above stay readable) ---- */

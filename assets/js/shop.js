@@ -27,17 +27,18 @@
         var soldOut = product.stock <= 0;
         return '<div class="group flex flex-col relative border border-copper-bronze/10 bg-light-cream hover:border-copper-bronze/40 hover:shadow-lg transition-all duration-500" ' +
             'data-id="' + escapeHtml(product.id) + '" data-category="' + escapeHtml(product.categories.join(" ")) + '" data-price="' + product.price + '" data-reveal="" style="--reveal-delay:' + (index % 3) * 100 + 'ms">' +
-            '<div class="relative w-full aspect-[4/5] overflow-hidden p-4">' +
+            '<a class="relative w-full aspect-[4/5] overflow-hidden p-4 block" href="product.html?id=' + encodeURIComponent(product.id) + '">' +
             (product.tag ? '<div class="absolute top-6 left-6 z-10 bg-sage-green text-white font-label-caps text-[10px] px-3 py-1 rounded-full">' + escapeHtml(product.tag) + "</div>" : "") +
             (soldOut ? '<div class="absolute top-6 right-6 z-10 bg-deep-charcoal text-white font-label-caps text-[10px] px-3 py-1 rounded-full">Sold Out</div>' : "") +
             '<div class="w-full h-full bg-surface-container-low' + (soldOut ? " opacity-50 grayscale" : "") + '" role="img" aria-label="' + escapeHtml(product.alt || product.name) + '" style="background-image: url(\'' + escapeHtml(product.image) + '\'); background-size: cover; background-position: center;"></div>' +
+            '</a>' +
             '<div class="absolute inset-x-4 bottom-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">' +
             '<button class="btn-sheen w-full bg-copper-bronze hover:bg-toasted-almond text-white hover:text-deep-charcoal font-body-md text-body-md py-3 transition-colors duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-copper-bronze disabled:hover:text-white" data-add-to-cart=""' + (soldOut ? " disabled" : "") + ">" +
-            (soldOut ? "Sold Out" : "Add to Cart") + "</button></div></div>" +
-            '<div class="p-6 text-center border-t border-copper-bronze/10">' +
+            (soldOut ? "Sold Out" : "Add to Cart") + "</button></div>" +
+            '<a class="p-6 text-center border-t border-copper-bronze/10 block hover:bg-toasted-almond/10 transition-colors duration-300" href="product.html?id=' + encodeURIComponent(product.id) + '">' +
             '<h3 class="font-headline-md text-[24px] text-deep-charcoal mb-2">' + escapeHtml(product.name) + "</h3>" +
             '<p class="font-body-md text-body-md text-copper-bronze mb-3">$' + product.price.toFixed(2) + "</p>" +
-            '<p class="font-label-caps text-label-caps text-on-surface-variant/70">' + stockLabel(product) + "</p></div></div>";
+            '<p class="font-label-caps text-label-caps text-on-surface-variant/70">' + stockLabel(product) + "</p></a></div>";
     }
 
     function visibleProducts() {
