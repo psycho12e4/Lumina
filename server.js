@@ -9,6 +9,9 @@
 
 "use strict";
 
+/* Load .env in development (ignored in production where env vars are set by the host) */
+try { require("fs").readFileSync(".env", "utf8").split("\n").forEach(function (line) { var m = line.match(/^([A-Z_]+)=(.*)$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, ""); }); } catch (e) { /* no .env, that's fine */ }
+
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -23,9 +26,12 @@ const UPLOAD_DIR = process.env.LUMINA_DATA_DIR
 const PORT = process.env.PORT || 4173;
 const ADMIN_PASSWORD = process.env.LUMINA_ADMIN_PASSWORD || "lumina-admin";
 
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://wovyvnazmlzhoiqcdfoc.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvdnl2bmF6bWx6aG9pcWNkZm9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDUzMTUsImV4cCI6MjA5NzA4MTMxNX0.IKFqIdArAPKjLM2pFZaqrKc05JpHNbaSLueJj-wU2qY";
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) env vars are required.");
+    process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
