@@ -90,6 +90,67 @@ async function handleApi(req, res, pathname) {
         return json(res, 200, { products: data });
     }
 
+    const productDetailMatch = pathname.match(/^\/api\/products\/([^/]+)$/);
+    if (productDetailMatch && method === "GET") {
+        const { data: product, error } = await supabase
+            .from("products")
+            .select("*")
+            .eq("id", productDetailMatch[1])
+            .neq("status", "hidden")
+            .maybeSingle();
+        if (error) return dbErr(res, error);
+        if (!product) return json(res, 404, { error: "Product not found." });
+
+        const { data: reviews, error: revErr } = await supabase
+            .from("reviews")
+            .select("*")
+            .eq("product_id", product.id)
+            .eq("status", "approved")
+            .order("created_at", { ascending: false });
+        if (revErr) return dbErr(res, revErr);
+
+        return json(res, 200, { product, reviews: reviews || [] });
+    }
+
+    if (pathname === "/api/reviews" && method === "POST") {
+        const body = await readBody(req);
+        const productId = String(body.productId || "").trim();
+        const orderId = String(body.orderId || "").trim();
+        const phone = String(body.phone || "").trim();
+        const name = String(body.name || "").trim();
+        const title = String(body.title || "").trim();
+        const reviewBody = String(body.body || "").trim();
+        const rating = parseInt(body.rating, 10);
+
+        if (!productId || !orderId || !phone) return json(res, 400, { error: "Order ID and phone number are required to verify your purchase." });
+        if (!name || !reviewBody) return json(res, 400, { error: "Name and review text are required." });
+        if (!(rating >= 1 && rating <= 5)) return json(res, 400, { error: "Rating must be between 1 and 5." });
+
+        const { data: order, error: orderErr } = await supabase
+            .from("orders")
+            .select("*")
+            .eq("id", orderId)
+            .maybeSingle();
+        if (orderErr) return dbErr(res, orderErr);
+
+        const purchased = order && order.customer && order.customer.phone === phone &&
+            Array.isArray(order.items) && order.items.some(function (i) { return i.id === productId; });
+        if (!purchased) return json(res, 403, { error: "We couldn't verify this purchase. Check your order ID and phone number." });
+
+        const { error } = await supabase.from("reviews").insert({
+            product_id: productId,
+            order_id: orderId,
+            name,
+            rating,
+            title,
+            body: reviewBody,
+            status: "pending"
+        });
+        if (error) return dbErr(res, error);
+
+        return json(res, 200, { ok: true, pending: true });
+    }
+
     if (pathname === "/api/newsletter" && method === "POST") {
         const body = await readBody(req);
         const email = String(body.email || "").trim().toLowerCase();
@@ -281,6 +342,28 @@ async function handleApi(req, res, pathname) {
     if (pathname.startsWith("/api/admin/")) {
         if (!isAdmin(req)) return json(res, 401, { error: "Not authorized." });
 
+        if (pathname === "/api/admin/reviews" && method === "GET") {
+            const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false });
+            if (error) return dbErr(res, error);
+            return json(res, 200, { reviews: data || [] });
+        }
+
+        const reviewMatch = pathname.match(/^\/api\/admin\/reviews\/([^/]+)$/);
+        if (reviewMatch && (method === "PUT" || method === "PATCH")) {
+            const body = await readBody(req);
+            if (["pending", "approved"].indexOf(body.status) === -1) return json(res, 400, { error: "Invalid status." });
+            const { data: updated, error } = await supabase
+                .from("reviews").update({ status: body.status }).eq("id", reviewMatch[1]).select().single();
+            if (error) return dbErr(res, error);
+            return json(res, 200, { ok: true, review: updated });
+        }
+
+        if (reviewMatch && method === "DELETE") {
+            const { error } = await supabase.from("reviews").delete().eq("id", reviewMatch[1]);
+            if (error) return dbErr(res, error);
+            return json(res, 200, { ok: true });
+        }
+
         if (pathname === "/api/admin/summary" && method === "GET") {
             const [{ data: products }, { data: orders }, { data: subscribers }] = await Promise.all([
                 supabase.from("products").select("*").order("created_at"),
@@ -315,6 +398,9 @@ async function handleApi(req, res, pathname) {
             const { data: existing } = await supabase.from("products").select("id").eq("id", id).maybeSingle();
             if (existing) id += "-2";
 
+            const images = Array.isArray(body.images) ? body.images.filter(Boolean) : [];
+            const colors = Array.isArray(body.colors) ? body.colors.filter(function (c) { return c && c.name; }) : [];
+
             const product = {
                 id,
                 name,
@@ -323,7 +409,9 @@ async function handleApi(req, res, pathname) {
                 status: body.status === "hidden" ? "hidden" : "active",
                 categories: Array.isArray(body.categories) && body.categories.length ? body.categories : ["glass"],
                 tag: String(body.tag || "Hand-Poured").trim(),
-                image: String(body.image || "assets/img/photo-01.png"),
+                image: String((images[0] || body.image) || "assets/img/photo-01.png"),
+                images: images.length ? images : (body.image ? [String(body.image)] : []),
+                colors,
                 alt: String(body.alt || name + " — artisanal soy wax candle by Lumina")
             };
             const { error } = await supabase.from("products").insert(product);
@@ -347,6 +435,13 @@ async function handleApi(req, res, pathname) {
             if (body.image !== undefined) updates.image = String(body.image);
             if (body.alt !== undefined) updates.alt = String(body.alt);
             if (Array.isArray(body.categories) && body.categories.length) updates.categories = body.categories;
+            if (Array.isArray(body.images)) {
+                updates.images = body.images.filter(Boolean);
+                if (updates.images.length) updates.image = updates.images[0];
+            }
+            if (Array.isArray(body.colors)) {
+                updates.colors = body.colors.filter(function (c) { return c && c.name; });
+            }
 
             const { data: updated, error: upErr } = await supabase
                 .from("products").update(updates).eq("id", productMatch[1]).select().single();
