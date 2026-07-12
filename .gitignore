@@ -1,2 +1,6 @@
 node_modules/
 .DS_Store
+
+# runtime store data (orders, subscribers, live stock) + admin photo uploads
+data/
+assets/img/uploads/

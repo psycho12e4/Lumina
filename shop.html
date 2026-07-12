@@ -11,7 +11,7 @@
 <meta content="website" property="og:type"/>
 <meta content="assets/img/photo-12.png" property="og:image"/>
 <meta content="summary_large_image" name="twitter:card"/>
-<link href="assets/img/lumina-logo.png" rel="icon" type="image/png"/>
+<link href="assets/img/lumina-logo.png?v=2" rel="icon" type="image/png"/>
 <script>document.documentElement.classList.add('js');</script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -42,6 +42,7 @@
 <link href="assets/css/tailwind.css" rel="stylesheet"/>
 <link href="assets/css/site.css" rel="stylesheet"/>
 <script defer="" src="assets/js/main.js"></script>
+<script defer="" src="assets/js/shop.js"></script>
 </head>
 <body class="bg-background text-on-surface font-body-md antialiased flex flex-col min-h-screen">
 <!-- TopNavBar (Shared Component) -->
@@ -52,7 +53,7 @@
 <span class="material-symbols-outlined text-2xl">menu</span>
 </button>
 <a class="flex items-center gap-3 font-headline-md text-2xl md:text-headline-md text-copper-bronze uppercase tracking-widest transition-opacity duration-300 hover:opacity-80" href="index.html">
-<img alt="Lumina logo" class="w-16 h-16 md:w-20 md:h-20 object-contain" src="assets/img/lumina-logo.png"/>
+<img alt="Lumina logo" class="w-16 h-16 md:w-20 md:h-20 object-contain" src="assets/img/lumina-logo.png?v=2"/>
 <span class="hidden sm:inline">Lumina</span>
 </a>
 <div class="flex items-center gap-1 text-copper-bronze ml-auto">
@@ -102,133 +103,9 @@
 <span class="material-symbols-outlined text-sm">swap_vert</span>
 </button>
 </div>
-<!-- Product Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter" data-product-grid="">
-<!-- Product Card 1 -->
-<div class="group flex flex-col relative border border-copper-bronze/10 bg-light-cream hover:border-copper-bronze/40 hover:shadow-lg transition-all duration-500" data-category="glass scented" data-price="42" data-reveal="">
-<!-- Image Container -->
-<div class="relative w-full aspect-[4/5] overflow-hidden p-4">
-<!-- Tag -->
-<div class="absolute top-6 left-6 z-10 bg-sage-green text-white font-label-caps text-[10px] px-3 py-1 rounded-full">
-                        Wooden Wick
-                    </div>
-<!-- Image -->
-<div class="w-full h-full bg-surface-container-low" data-alt="A close-up shot of a minimalist artisanal glass candle with a wooden wick resting on a light cream surface. Warm, natural window lighting casts soft shadows, highlighting the smooth texture of the soy wax and the delicate copper-bronze rim of the glass container. The mood is serene, organic, and luxurious, fitting a high-end boutique aesthetic." style="background-image: url('assets/img/photo-03.png'); background-size: cover; background-position: center;">
-</div>
-<!-- Hover Action -->
-<div class="absolute inset-x-4 bottom-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">
-<button class="btn-sheen w-full bg-copper-bronze hover:bg-toasted-almond text-white hover:text-deep-charcoal font-body-md text-body-md py-3 transition-colors duration-300" data-add-to-cart="">
-                            Add to Cart
-                        </button>
-</div>
-</div>
-<!-- Content Container -->
-<div class="p-6 text-center border-t border-copper-bronze/10">
-<h3 class="font-headline-md text-[24px] text-deep-charcoal mb-2">Midnight Amber</h3>
-<p class="font-body-md text-body-md text-copper-bronze mb-3">$42.00</p>
-<p class="font-label-caps text-label-caps text-on-surface-variant/70">12 pieces available</p>
-</div>
-</div>
-<!-- Product Card 2 -->
-<div class="group flex flex-col relative border border-copper-bronze/10 bg-light-cream hover:border-copper-bronze/40 hover:shadow-lg transition-all duration-500" data-category="pillar" data-price="38" data-reveal="" style="--reveal-delay:100ms">
-<!-- Image Container -->
-<div class="relative w-full aspect-[4/5] overflow-hidden p-4">
-<!-- Tag -->
-<div class="absolute top-6 left-6 z-10 bg-sage-green text-white font-label-caps text-[10px] px-3 py-1 rounded-full">
-                        Hand-Poured
-                    </div>
-<!-- Image -->
-<div class="w-full h-full bg-surface-container-low" data-alt="A tall, elegant pillar candle in a creamy off-white shade, standing perfectly straight against a soft, light background. The lighting is bright and airy, emphasizing the smooth, artisanal finish of the wax. A subtle copper-bronze line hints at a reflective surface below. The atmosphere conveys quiet luxury and minimalist domestic sanctuary." style="background-image: url('assets/img/photo-05.png'); background-size: cover; background-position: center;">
-</div>
-<!-- Hover Action -->
-<div class="absolute inset-x-4 bottom-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">
-<button class="btn-sheen w-full bg-copper-bronze hover:bg-toasted-almond text-white hover:text-deep-charcoal font-body-md text-body-md py-3 transition-colors duration-300" data-add-to-cart="">
-                            Add to Cart
-                        </button>
-</div>
-</div>
-<!-- Content Container -->
-<div class="p-6 text-center border-t border-copper-bronze/10">
-<h3 class="font-headline-md text-[24px] text-deep-charcoal mb-2">Ivory Silhouette</h3>
-<p class="font-body-md text-body-md text-copper-bronze mb-3">$38.00</p>
-<p class="font-label-caps text-label-caps text-on-surface-variant/70">8 pieces available</p>
-</div>
-</div>
-<!-- Product Card 3 -->
-<div class="group flex flex-col relative border border-copper-bronze/10 bg-light-cream hover:border-copper-bronze/40 hover:shadow-lg transition-all duration-500" data-category="glass scented" data-price="45" data-reveal="" style="--reveal-delay:200ms">
-<!-- Image Container -->
-<div class="relative w-full aspect-[4/5] overflow-hidden p-4">
-<!-- Tag -->
-<div class="absolute top-6 left-6 z-10 bg-sage-green text-white font-label-caps text-[10px] px-3 py-1 rounded-full">
-                        Essential Oils
-                    </div>
-<!-- Image -->
-<div class="w-full h-full bg-surface-container-low" data-alt="A low, wide glass container holding a scented soy candle, situated on a toasted almond colored linen fabric. Soft morning light streams across the scene, creating a gentle, inviting mood. Small organic details, like a dried botanical element, rest nearby, enhancing the slow living, artisanal aesthetic characteristic of high-end, tactile design." style="background-image: url('assets/img/photo-18.png'); background-size: cover; background-position: center;">
-</div>
-<!-- Hover Action -->
-<div class="absolute inset-x-4 bottom-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">
-<button class="btn-sheen w-full bg-copper-bronze hover:bg-toasted-almond text-white hover:text-deep-charcoal font-body-md text-body-md py-3 transition-colors duration-300" data-add-to-cart="">
-                            Add to Cart
-                        </button>
-</div>
-</div>
-<!-- Content Container -->
-<div class="p-6 text-center border-t border-copper-bronze/10">
-<h3 class="font-headline-md text-[24px] text-deep-charcoal mb-2">Wild Fig &amp; Cedar</h3>
-<p class="font-body-md text-body-md text-copper-bronze mb-3">$45.00</p>
-<p class="font-label-caps text-label-caps text-on-surface-variant/70">15 pieces available</p>
-</div>
-</div>
-<!-- Product Card 4 -->
-<div class="group flex flex-col relative border border-copper-bronze/10 bg-light-cream hover:border-copper-bronze/40 hover:shadow-lg transition-all duration-500" data-category="pillar" data-price="65" data-reveal="">
-<!-- Image Container -->
-<div class="relative w-full aspect-[4/5] overflow-hidden p-4">
-<!-- Tag -->
-<div class="absolute top-6 left-6 z-10 bg-sage-green text-white font-label-caps text-[10px] px-3 py-1 rounded-full">
-                        Hand-Poured
-                    </div>
-<!-- Image -->
-<div class="w-full h-full bg-surface-container-low" data-alt="A set of two minimalist pillar candles of varying heights, beautifully staged against a warm, light cream background. The shadows are soft and directional, giving depth to the smooth wax texture. The overall composition is clean, modern, and embodies a quiet luxury approach to home decor and artisanal craftsmanship." style="background-image: url('assets/img/photo-01.png'); background-size: cover; background-position: center;">
-</div>
-<!-- Hover Action -->
-<div class="absolute inset-x-4 bottom-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">
-<button class="btn-sheen w-full bg-copper-bronze hover:bg-toasted-almond text-white hover:text-deep-charcoal font-body-md text-body-md py-3 transition-colors duration-300" data-add-to-cart="">
-                            Add to Cart
-                        </button>
-</div>
-</div>
-<!-- Content Container -->
-<div class="p-6 text-center border-t border-copper-bronze/10">
-<h3 class="font-headline-md text-[24px] text-deep-charcoal mb-2">The Architectural Set</h3>
-<p class="font-body-md text-body-md text-copper-bronze mb-3">$65.00</p>
-<p class="font-label-caps text-label-caps text-on-surface-variant/70">5 pieces available</p>
-</div>
-</div>
-<!-- Product Card 5 -->
-<div class="group flex flex-col relative border border-copper-bronze/10 bg-light-cream hover:border-copper-bronze/40 hover:shadow-lg transition-all duration-500" data-category="glass scented" data-price="48" data-reveal="" style="--reveal-delay:100ms">
-<!-- Image Container -->
-<div class="relative w-full aspect-[4/5] overflow-hidden p-4">
-<!-- Tag -->
-<div class="absolute top-6 left-6 z-10 bg-sage-green text-white font-label-caps text-[10px] px-3 py-1 rounded-full">
-                        Wooden Wick
-                    </div>
-<!-- Image -->
-<div class="w-full h-full bg-surface-container-low" data-alt="A close-up view of an amber-tinted glass candle emitting a soft, warm glow from its wooden wick. The environment is slightly dim, emphasizing the cozy, inviting light of the flame. The tactile quality of the glass and the organic nature of the wood reflect a high-end, slow-living aesthetic ideal for a relaxing domestic sanctuary." style="background-image: url('assets/img/photo-10.png'); background-size: cover; background-position: center;">
-</div>
-<!-- Hover Action -->
-<div class="absolute inset-x-4 bottom-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 md:translate-y-2 md:group-hover:translate-y-0 transition-all duration-300">
-<button class="btn-sheen w-full bg-copper-bronze hover:bg-toasted-almond text-white hover:text-deep-charcoal font-body-md text-body-md py-3 transition-colors duration-300" data-add-to-cart="">
-                            Add to Cart
-                        </button>
-</div>
-</div>
-<!-- Content Container -->
-<div class="p-6 text-center border-t border-copper-bronze/10">
-<h3 class="font-headline-md text-[24px] text-deep-charcoal mb-2">Smoked Vetiver</h3>
-<p class="font-body-md text-body-md text-copper-bronze mb-3">$48.00</p>
-<p class="font-label-caps text-label-caps text-on-surface-variant/70">20 pieces available</p>
-</div>
-</div>
+<!-- Product Grid (rendered live from /api/products by assets/js/shop.js) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter" data-product-grid="" data-dynamic="">
+<p class="col-span-full text-center font-body-md text-body-md text-on-surface-variant py-16" data-grid-empty="">Lighting the wicks…</p>
 </div>
 </main>
 <!-- Footer (Shared Component) -->
