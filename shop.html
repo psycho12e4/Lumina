@@ -42,6 +42,7 @@
 <link href="assets/css/tailwind.css" rel="stylesheet"/>
 <link href="assets/css/site.css" rel="stylesheet"/>
 <script defer="" src="assets/js/main.js"></script>
+    <script defer src="assets/js/auth.js"></script>
 <script defer="" src="assets/js/shop.js"></script>
 </head>
 <body class="bg-background text-on-surface font-body-md antialiased flex flex-col min-h-screen">
@@ -56,7 +57,7 @@
 <img alt="Lumina logo" class="w-16 h-16 md:w-20 md:h-20 object-contain" src="assets/img/lumina-logo.png?v=2"/>
 <span class="hidden sm:inline">Lumina</span>
 </a>
-<div class="flex items-center gap-1 text-copper-bronze ml-auto">
+<div class="flex items-center gap-1 text-copper-bronze ml-auto" id="nav-auth-actions">
 <button aria-label="Open shopping bag" data-cart-toggle="" class="p-2 relative transition-opacity duration-300 hover:opacity-70">
 <span class="material-symbols-outlined text-2xl" data-icon="shopping_bag">shopping_bag</span>
 <span class="absolute top-0 right-0 bg-copper-bronze text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold" data-cart-count="">0</span>

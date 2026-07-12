@@ -18,6 +18,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 const nodemailer = require("nodemailer");
+const bcrypt = require("bcrypt");
 
 const ROOT = __dirname;
 const UPLOAD_DIR = process.env.LUMINA_DATA_DIR
@@ -103,6 +104,14 @@ function isAdmin(req) {
 
 function slugify(name) {
     return String(name).toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "product";
+}
+
+function parseCookie(str) {
+    return str.split(";").reduce(function (out, part) {
+        var eq = part.indexOf("=");
+        if (eq > 0) out[part.slice(0, eq).trim()] = decodeURIComponent(part.slice(eq + 1).trim());
+        return out;
+    }, {});
 }
 
 function dbErr(res, err) {
@@ -356,6 +365,69 @@ async function handleApi(req, res, pathname) {
         const token = crypto.randomBytes(24).toString("hex");
         verifiedEmails.set(token, { email, expiresAt: Date.now() + 30 * 60 * 1000 });
         return json(res, 200, { ok: true, verificationToken: token });
+    }
+
+    /* -- user auth -- */
+
+    if (pathname === "/api/auth/signup" && method === "POST") {
+        const body = await readBody(req);
+        const name = String(body.name || "").trim();
+        const email = String(body.email || "").trim().toLowerCase();
+        const password = String(body.password || "");
+        if (!name) return json(res, 400, { error: "Full name is required." });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(res, 400, { error: "Please enter a valid email address." });
+        if (password.length < 8) return json(res, 400, { error: "Password must be at least 8 characters." });
+
+        const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
+        if (existing) return json(res, 409, { error: "An account with this email already exists." });
+
+        const password_hash = await bcrypt.hash(password, 10);
+        const { data: user, error: insertErr } = await supabase
+            .from("users").insert({ name, email, password_hash }).select("id,name,email").single();
+        if (insertErr) return dbErr(res, insertErr);
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); /* 30 days */
+        await supabase.from("user_sessions").insert({ token, user_id: user.id, expires_at: expiresAt });
+
+        res.setHeader("Set-Cookie", "lumina_session=" + token + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=" + (30 * 24 * 60 * 60));
+        return json(res, 201, { ok: true, user: { id: user.id, name: user.name, email: user.email } });
+    }
+
+    if (pathname === "/api/auth/login" && method === "POST") {
+        const body = await readBody(req);
+        const email = String(body.email || "").trim().toLowerCase();
+        const password = String(body.password || "");
+        if (!email || !password) return json(res, 400, { error: "Email and password are required." });
+
+        const { data: user } = await supabase.from("users").select("*").eq("email", email).maybeSingle();
+        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+            return json(res, 401, { error: "Incorrect email or password." });
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        await supabase.from("user_sessions").insert({ token, user_id: user.id, expires_at: expiresAt });
+
+        res.setHeader("Set-Cookie", "lumina_session=" + token + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=" + (30 * 24 * 60 * 60));
+        return json(res, 200, { ok: true, user: { id: user.id, name: user.name, email: user.email } });
+    }
+
+    if (pathname === "/api/auth/logout" && method === "POST") {
+        const token = parseCookie(req.headers.cookie || "").lumina_session;
+        if (token) await supabase.from("user_sessions").delete().eq("token", token);
+        res.setHeader("Set-Cookie", "lumina_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
+        return json(res, 200, { ok: true });
+    }
+
+    if (pathname === "/api/auth/me" && method === "GET") {
+        const token = parseCookie(req.headers.cookie || "").lumina_session;
+        if (!token) return json(res, 401, { error: "Not logged in." });
+        const { data: session } = await supabase
+            .from("user_sessions").select("*, users(id,name,email)").eq("token", token)
+            .gt("expires_at", new Date().toISOString()).maybeSingle();
+        if (!session) return json(res, 401, { error: "Session expired." });
+        return json(res, 200, { user: session.users });
     }
 
     if (pathname === "/api/admin/login" && method === "POST") {
