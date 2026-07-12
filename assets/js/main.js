@@ -257,21 +257,107 @@
             '<input class="' + fieldClass + '" id="co-email" name="email" type="email" autocomplete="email" placeholder="you@example.com"/></div>' +
             '<div><label class="' + labelClass + '" for="co-address">Delivery address</label>' +
             '<textarea class="' + fieldClass + '" id="co-address" name="address" rows="2" autocomplete="street-address" placeholder="House, street, city, PIN"></textarea></div>' +
-            '<button class="btn-sheen w-full px-4 py-3 mt-2 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" type="submit">Continue to Payment</button></form>';
+            '<p class="font-body-md text-sm text-error hidden" data-details-error=""></p>' +
+            '<button class="btn-sheen w-full px-4 py-3 mt-2 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300 disabled:opacity-50" data-details-btn="" type="submit">Send OTP &amp; Continue</button></form>';
         body.querySelector("[data-checkout-details]").addEventListener("submit", function (event) {
             event.preventDefault();
             var form = event.target;
             if (!form.reportValidity()) return;
-            renderPaymentStep({
+            var customer = {
                 name: form.name.value.trim(),
                 phone: form.phone.value.trim(),
                 email: form.email.value.trim(),
                 address: form.address.value.trim()
+            };
+            var btn = form.querySelector("[data-details-btn]");
+            var errorEl = form.querySelector("[data-details-error]");
+            errorEl.classList.add("hidden");
+            btn.disabled = true;
+            btn.textContent = "Sending OTP…";
+            fetch("/api/otp/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: customer.phone })
+            }).then(function (res) {
+                return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+            }).then(function (result) {
+                if (!result.ok) throw new Error(result.data.error || "Could not send OTP.");
+                renderOtpStep(customer, result.data.testMode);
+            }).catch(function (err) {
+                errorEl.textContent = err.message || "Could not send OTP — please try again.";
+                errorEl.classList.remove("hidden");
+                btn.disabled = false;
+                btn.innerHTML = "Send OTP &amp; Continue";
             });
         });
     }
 
-    function renderPaymentStep(customer) {
+    function renderOtpStep(customer, testMode) {
+        var body = checkoutModal.querySelector("[data-checkout-body]");
+        body.innerHTML =
+            '<div class="mb-5 px-4 py-3 bg-toasted-almond/40 border border-copper-bronze/30 font-body-md text-sm text-deep-charcoal">' +
+            (testMode
+                ? '<strong>TEST MODE</strong> — no SMS sent. Check the server console for your 6-digit code.'
+                : 'A 6-digit code was sent to <strong>' + customer.phone + '</strong>. It expires in 10 minutes.') +
+            '</div>' +
+            '<form class="flex flex-col gap-4" data-checkout-otp="">' +
+            '<div><label class="' + labelClass + '" for="co-otp">Verification code *</label>' +
+            '<input class="' + fieldClass + ' text-center tracking-[0.4em] text-xl" id="co-otp" name="otp" required ' +
+            'inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" autocomplete="one-time-code"/></div>' +
+            '<p class="font-body-md text-sm text-error hidden" data-otp-error=""></p>' +
+            '<button class="btn-sheen w-full px-4 py-3 mt-2 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300 disabled:opacity-50" data-otp-btn="" type="submit">Verify &amp; Continue</button>' +
+            '<button class="w-full text-center font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest" data-resend-btn="" type="button">Resend code</button>' +
+            '<button class="w-full text-center font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest" data-back-details-btn="" type="button">Back to details</button>' +
+            '</form>';
+
+        body.querySelector("[data-back-details-btn]").addEventListener("click", renderDetailsStep);
+
+        body.querySelector("[data-resend-btn]").addEventListener("click", function () {
+            var resendBtn = body.querySelector("[data-resend-btn]");
+            resendBtn.disabled = true;
+            resendBtn.textContent = "Sending…";
+            fetch("/api/otp/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: customer.phone })
+            }).then(function (res) { return res.json(); }).then(function (data) {
+                resendBtn.disabled = false;
+                resendBtn.textContent = "Resend code";
+                showToast(data.ok ? "New code sent!" : (data.error || "Could not resend."));
+            }).catch(function () {
+                resendBtn.disabled = false;
+                resendBtn.textContent = "Resend code";
+                showToast("Could not resend — please try again.");
+            });
+        });
+
+        body.querySelector("[data-checkout-otp]").addEventListener("submit", function (event) {
+            event.preventDefault();
+            var form = event.target;
+            var otpBtn = form.querySelector("[data-otp-btn]");
+            var errorEl = form.querySelector("[data-otp-error]");
+            errorEl.classList.add("hidden");
+            otpBtn.disabled = true;
+            otpBtn.textContent = "Verifying…";
+            fetch("/api/otp/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: customer.phone, code: form.otp.value.trim() })
+            }).then(function (res) {
+                return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+            }).then(function (result) {
+                if (!result.ok) throw new Error(result.data.error || "Verification failed.");
+                renderPaymentStep(customer, result.data.verificationToken);
+            }).catch(function (err) {
+                errorEl.textContent = err.message || "Verification failed — please try again.";
+                errorEl.classList.remove("hidden");
+                otpBtn.disabled = false;
+                otpBtn.innerHTML = "Verify &amp; Continue";
+            });
+        });
+    }
+
+    function renderPaymentStep(customer, verificationToken) {
         var body = checkoutModal.querySelector("[data-checkout-body]");
         body.innerHTML = summaryHtml() +
             '<div class="mb-4 px-4 py-3 bg-toasted-almond/40 border border-copper-bronze/30 font-body-md text-sm text-deep-charcoal">' +
@@ -287,7 +373,7 @@
             '<p class="font-body-md text-sm text-error hidden" data-payment-error=""></p>' +
             '<button class="btn-sheen w-full px-4 py-3 mt-2 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300 disabled:opacity-50" data-pay-btn="" type="submit">Authorize &amp; Pay</button>' +
             '<button class="w-full text-center font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest" data-back-btn="" type="button">Back to details</button></form>';
-        body.querySelector("[data-back-btn]").addEventListener("click", renderDetailsStep);
+        body.querySelector("[data-back-btn]").addEventListener("click", function () { renderOtpStep(customer, false); });
         body.querySelector("[data-checkout-payment]").addEventListener("submit", function (event) {
             event.preventDefault();
             var form = event.target;
@@ -305,7 +391,8 @@
                     body: JSON.stringify({
                         customer: customer,
                         items: getCart(),
-                        payment: { card: form.card.value }
+                        payment: { card: form.card.value },
+                        verificationToken: verificationToken
                     })
                 }).then(function (res) {
                     return res.json().then(function (data) { return { ok: res.ok, data: data }; });

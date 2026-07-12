@@ -1,10 +1,11 @@
-/* Lumina — local store server (no dependencies, plain Node).
+/* Lumina — store server backed by Supabase.
    Run with: npm start  (or: node server.js)
-   Serves the static site plus a small JSON API backed by data/db.json:
+   Serves the static site plus a JSON API:
      - products (live stock, add/edit, photo upload)
      - orders (placed via the test-mode checkout)
      - newsletter subscribers (shown in the admin, never emailed)
-   Admin endpoints require the x-admin-token header from /api/admin/login. */
+   Admin endpoints require the x-admin-token header from /api/admin/login.
+   Required env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) */
 
 "use strict";
 
@@ -12,109 +13,26 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { createClient } = require("@supabase/supabase-js");
 
 const ROOT = __dirname;
-/* On Render, set LUMINA_DATA_DIR to a mounted persistent disk (e.g. /data)
-   so orders/stock/subscribers and uploaded photos survive redeploys. */
-const DATA_DIR = process.env.LUMINA_DATA_DIR
-    ? path.join(process.env.LUMINA_DATA_DIR, "data")
-    : path.join(ROOT, "data");
-const DB_FILE = path.join(DATA_DIR, "db.json");
 const UPLOAD_DIR = process.env.LUMINA_DATA_DIR
     ? path.join(process.env.LUMINA_DATA_DIR, "uploads")
     : path.join(ROOT, "assets", "img", "uploads");
 const PORT = process.env.PORT || 4173;
 const ADMIN_PASSWORD = process.env.LUMINA_ADMIN_PASSWORD || "lumina-admin";
 
-/* ---- Database (a JSON file; fine for a single local shop) ---- */
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://wovyvnazmlzhoiqcdfoc.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvdnl2bmF6bWx6aG9pcWNkZm9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDUzMTUsImV4cCI6MjA5NzA4MTMxNX0.IKFqIdArAPKjLM2pFZaqrKc05JpHNbaSLueJj-wU2qY";
 
-const SEED = {
-    products: [
-        {
-            id: "midnight-amber",
-            name: "Midnight Amber",
-            price: 42,
-            stock: 12,
-            status: "active",
-            categories: ["glass", "scented"],
-            tag: "Wooden Wick",
-            image: "assets/img/photo-03.png",
-            alt: "A close-up shot of a minimalist artisanal glass candle with a wooden wick resting on a light cream surface."
-        },
-        {
-            id: "ivory-silhouette",
-            name: "Ivory Silhouette",
-            price: 38,
-            stock: 8,
-            status: "active",
-            categories: ["pillar"],
-            tag: "Hand-Poured",
-            image: "assets/img/photo-05.png",
-            alt: "A tall, elegant pillar candle in a creamy off-white shade, standing against a soft, light background."
-        },
-        {
-            id: "wild-fig-cedar",
-            name: "Wild Fig & Cedar",
-            price: 45,
-            stock: 15,
-            status: "active",
-            categories: ["glass", "scented"],
-            tag: "Essential Oils",
-            image: "assets/img/photo-18.png",
-            alt: "A low, wide glass container holding a scented soy candle on toasted almond colored linen fabric."
-        },
-        {
-            id: "architectural-set",
-            name: "The Architectural Set",
-            price: 65,
-            stock: 5,
-            status: "active",
-            categories: ["pillar"],
-            tag: "Hand-Poured",
-            image: "assets/img/photo-01.png",
-            alt: "A set of two minimalist pillar candles of varying heights against a warm, light cream background."
-        },
-        {
-            id: "smoked-vetiver",
-            name: "Smoked Vetiver",
-            price: 48,
-            stock: 20,
-            status: "active",
-            categories: ["glass", "scented"],
-            tag: "Wooden Wick",
-            image: "assets/img/photo-10.png",
-            alt: "A close-up view of an amber-tinted glass candle emitting a soft, warm glow from its wooden wick."
-        }
-    ],
-    orders: [],
-    subscribers: [],
-    counters: { order: 1000 }
-};
-
-function loadDb() {
-    try {
-        return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
-    } catch (e) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-        fs.writeFileSync(DB_FILE, JSON.stringify(SEED, null, 2));
-        return JSON.parse(JSON.stringify(SEED));
-    }
-}
-
-const db = loadDb();
-
-let saveTimer = null;
-function saveDb() {
-    /* debounce writes a touch so bursts of edits don't thrash the disk */
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-    }, 50);
-}
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ---- Helpers ---- */
 
 const adminTokens = new Set();
+/* phone verification tokens: token → {phone, expiresAt} */
+const verifiedPhones = new Map();
 
 function json(res, status, body) {
     const text = JSON.stringify(body);
@@ -131,19 +49,12 @@ function readBody(req) {
         const chunks = [];
         req.on("data", function (chunk) {
             size += chunk.length;
-            if (size > 10 * 1024 * 1024) {
-                reject(new Error("Payload too large"));
-                req.destroy();
-                return;
-            }
+            if (size > 10 * 1024 * 1024) { reject(new Error("Payload too large")); req.destroy(); return; }
             chunks.push(chunk);
         });
         req.on("end", function () {
-            try {
-                resolve(chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {});
-            } catch (e) {
-                reject(new Error("Invalid JSON"));
-            }
+            try { resolve(chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {}); }
+            catch (e) { reject(new Error("Invalid JSON")); }
         });
         req.on("error", reject);
     });
@@ -157,8 +68,9 @@ function slugify(name) {
     return String(name).toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "product";
 }
 
-function publicProducts() {
-    return db.products.filter(function (p) { return p.status !== "hidden"; });
+function dbErr(res, err) {
+    console.error("Supabase error:", err);
+    return json(res, 500, { error: "Database error: " + (err.message || err) });
 }
 
 /* ---- API routes ---- */
@@ -169,7 +81,13 @@ async function handleApi(req, res, pathname) {
     /* -- public -- */
 
     if (pathname === "/api/products" && method === "GET") {
-        return json(res, 200, { products: publicProducts() });
+        const { data, error } = await supabase
+            .from("products")
+            .select("*")
+            .neq("status", "hidden")
+            .order("created_at");
+        if (error) return dbErr(res, error);
+        return json(res, 200, { products: data });
     }
 
     if (pathname === "/api/newsletter" && method === "POST") {
@@ -178,12 +96,17 @@ async function handleApi(req, res, pathname) {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return json(res, 400, { error: "Please enter a valid email address." });
         }
-        const exists = db.subscribers.some(function (s) { return s.email === email; });
-        if (!exists) {
-            db.subscribers.push({ email: email, source: String(body.source || "site"), date: new Date().toISOString() });
-            saveDb();
-        }
-        return json(res, 200, { ok: true, alreadySubscribed: exists });
+        const { data: existing } = await supabase
+            .from("subscribers")
+            .select("id")
+            .eq("email", email)
+            .maybeSingle();
+        if (existing) return json(res, 200, { ok: true, alreadySubscribed: true });
+        const { error } = await supabase
+            .from("subscribers")
+            .insert({ email, source: String(body.source || "site") });
+        if (error) return dbErr(res, error);
+        return json(res, 200, { ok: true, alreadySubscribed: false });
     }
 
     if (pathname === "/api/orders" && method === "POST") {
@@ -194,11 +117,25 @@ async function handleApi(req, res, pathname) {
         if (!name || !phone) return json(res, 400, { error: "Name and mobile number are required." });
         if (!Array.isArray(body.items) || !body.items.length) return json(res, 400, { error: "Your bag is empty." });
 
-        /* resolve items against the catalog (by id, falling back to name) */
+        /* Phone must have been verified in the last 30 min */
+        const vt = body.verificationToken ? verifiedPhones.get(body.verificationToken) : null;
+        if (!vt || vt.phone !== phone || vt.expiresAt < Date.now()) {
+            return json(res, 403, { error: "Phone number not verified. Please complete OTP verification." });
+        }
+        verifiedPhones.delete(body.verificationToken); /* single-use */
+
+        /* resolve items against the catalog */
+        const ids = body.items.map(function (i) { return i.id; }).filter(Boolean);
+        const { data: catalog, error: catErr } = await supabase
+            .from("products")
+            .select("*")
+            .in("id", ids);
+        if (catErr) return dbErr(res, catErr);
+
         const resolved = [];
         for (const item of body.items) {
             const qty = Math.max(1, parseInt(item.qty, 10) || 1);
-            const product = db.products.find(function (p) {
+            const product = catalog.find(function (p) {
                 return (item.id && p.id === item.id) || p.name === item.name;
             });
             if (!product || product.status === "hidden") {
@@ -207,22 +144,39 @@ async function handleApi(req, res, pathname) {
             if (product.stock < qty) {
                 return json(res, 409, { error: 'Only ' + product.stock + ' of "' + product.name + '" left in stock.' });
             }
-            resolved.push({ product: product, qty: qty });
+            resolved.push({ product, qty });
         }
 
-        /* fake payment authorization — TEST MODE, nothing is charged */
+        /* fake payment — TEST MODE */
         const card = String((body.payment && body.payment.card) || "").replace(/\D/g, "");
         if (card.length < 12) return json(res, 402, { error: "Payment declined: enter a valid card number (test mode accepts any 12+ digits)." });
 
-        resolved.forEach(function (line) { line.product.stock -= line.qty; });
-        db.counters.order += 1;
+        /* decrement stock */
+        for (const line of resolved) {
+            const { error: stockErr } = await supabase
+                .from("products")
+                .update({ stock: line.product.stock - line.qty })
+                .eq("id", line.product.id);
+            if (stockErr) return dbErr(res, stockErr);
+        }
+
+        /* increment order counter */
+        const { data: counterRow, error: cntErr } = await supabase
+            .from("counters")
+            .select("value")
+            .eq("key", "order")
+            .single();
+        if (cntErr) return dbErr(res, cntErr);
+        const nextNum = counterRow.value + 1;
+        await supabase.from("counters").update({ value: nextNum }).eq("key", "order");
+
         const order = {
-            id: "LUM-" + db.counters.order,
+            id: "LUM-" + nextNum,
             date: new Date().toISOString(),
             status: "new",
             customer: {
-                name: name,
-                phone: phone,
+                name,
+                phone,
                 email: String(customer.email || "").trim(),
                 address: String(customer.address || "").trim()
             },
@@ -237,9 +191,79 @@ async function handleApi(req, res, pathname) {
                 authorization: "AUTH-" + crypto.randomBytes(4).toString("hex").toUpperCase()
             }
         };
-        db.orders.unshift(order);
-        saveDb();
+
+        const { error: orderErr } = await supabase.from("orders").insert(order);
+        if (orderErr) return dbErr(res, orderErr);
+
         return json(res, 201, { ok: true, order: { id: order.id, total: order.total, authorization: order.payment.authorization } });
+    }
+
+    if (pathname === "/api/otp/send" && method === "POST") {
+        const body = await readBody(req);
+        const phone = String(body.phone || "").trim();
+        if (!/^[0-9+()\- ]{7,15}$/.test(phone)) {
+            return json(res, 400, { error: "Please enter a valid mobile number." });
+        }
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); /* 10 min */
+
+        /* Delete any previous unused OTPs for this phone */
+        await supabase.from("otp_verifications").delete().eq("phone", phone).eq("verified", false);
+
+        const { error } = await supabase.from("otp_verifications").insert({ phone, code, expires_at: expiresAt });
+        if (error) return dbErr(res, error);
+
+        /* In production set SMS_PROVIDER_URL and it will POST {phone, code} there.
+           In test mode the code is printed to the server console. */
+        if (process.env.SMS_PROVIDER_URL) {
+            try {
+                const https = require("https");
+                const payload = JSON.stringify({ phone, code });
+                const url = new URL(process.env.SMS_PROVIDER_URL);
+                const options = {
+                    hostname: url.hostname, port: url.port || 443, path: url.pathname,
+                    method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+                };
+                await new Promise(function (resolve) {
+                    const r = https.request(options, resolve);
+                    r.on("error", resolve);
+                    r.write(payload);
+                    r.end();
+                });
+            } catch (e) { console.error("SMS send error:", e.message); }
+        } else {
+            console.log("[TEST OTP] Phone: " + phone + "  Code: " + code + "  (expires in 10 min)");
+        }
+
+        return json(res, 200, { ok: true, testMode: !process.env.SMS_PROVIDER_URL });
+    }
+
+    if (pathname === "/api/otp/verify" && method === "POST") {
+        const body = await readBody(req);
+        const phone = String(body.phone || "").trim();
+        const code = String(body.code || "").trim();
+        if (!phone || !code) return json(res, 400, { error: "Phone and code are required." });
+
+        const { data: row, error } = await supabase
+            .from("otp_verifications")
+            .select("*")
+            .eq("phone", phone)
+            .eq("code", code)
+            .eq("verified", false)
+            .gt("expires_at", new Date().toISOString())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) return dbErr(res, error);
+        if (!row) return json(res, 400, { error: "Invalid or expired code. Please request a new one." });
+
+        await supabase.from("otp_verifications").update({ verified: true }).eq("id", row.id);
+
+        const token = crypto.randomBytes(24).toString("hex");
+        /* Store the verified token so the order endpoint can check it */
+        verifiedPhones.set(token, { phone, expiresAt: Date.now() + 30 * 60 * 1000 });
+        return json(res, 200, { ok: true, verificationToken: token });
     }
 
     if (pathname === "/api/admin/login" && method === "POST") {
@@ -249,7 +273,7 @@ async function handleApi(req, res, pathname) {
         }
         const token = crypto.randomBytes(24).toString("hex");
         adminTokens.add(token);
-        return json(res, 200, { token: token });
+        return json(res, 200, { token });
     }
 
     /* -- admin (token required) -- */
@@ -258,19 +282,26 @@ async function handleApi(req, res, pathname) {
         if (!isAdmin(req)) return json(res, 401, { error: "Not authorized." });
 
         if (pathname === "/api/admin/summary" && method === "GET") {
+            const [{ data: products }, { data: orders }, { data: subscribers }] = await Promise.all([
+                supabase.from("products").select("*").order("created_at"),
+                supabase.from("orders").select("*").order("date", { ascending: false }),
+                supabase.from("subscribers").select("*").order("date", { ascending: false })
+            ]);
+
             const unitsSold = {};
-            db.orders.forEach(function (order) {
-                order.items.forEach(function (item) {
+            (orders || []).forEach(function (order) {
+                (order.items || []).forEach(function (item) {
                     unitsSold[item.id] = (unitsSold[item.id] || 0) + item.qty;
                 });
             });
+
             return json(res, 200, {
-                products: db.products.map(function (p) {
+                products: (products || []).map(function (p) {
                     return Object.assign({}, p, { unitsSold: unitsSold[p.id] || 0 });
                 }),
-                orders: db.orders,
-                subscribers: db.subscribers,
-                revenue: db.orders.reduce(function (sum, o) { return sum + o.total; }, 0)
+                orders: orders || [],
+                subscribers: subscribers || [],
+                revenue: (orders || []).reduce(function (sum, o) { return sum + Number(o.total); }, 0)
             });
         }
 
@@ -279,12 +310,15 @@ async function handleApi(req, res, pathname) {
             const name = String(body.name || "").trim();
             const price = parseFloat(body.price);
             if (!name || !(price >= 0)) return json(res, 400, { error: "A name and a valid price are required." });
+
             let id = slugify(name);
-            while (db.products.some(function (p) { return p.id === id; })) id += "-2";
+            const { data: existing } = await supabase.from("products").select("id").eq("id", id).maybeSingle();
+            if (existing) id += "-2";
+
             const product = {
-                id: id,
-                name: name,
-                price: price,
+                id,
+                name,
+                price,
                 stock: Math.max(0, parseInt(body.stock, 10) || 0),
                 status: body.status === "hidden" ? "hidden" : "active",
                 categories: Array.isArray(body.categories) && body.categories.length ? body.categories : ["glass"],
@@ -292,45 +326,49 @@ async function handleApi(req, res, pathname) {
                 image: String(body.image || "assets/img/photo-01.png"),
                 alt: String(body.alt || name + " — artisanal soy wax candle by Lumina")
             };
-            db.products.push(product);
-            saveDb();
-            return json(res, 201, { ok: true, product: product });
+            const { error } = await supabase.from("products").insert(product);
+            if (error) return dbErr(res, error);
+            return json(res, 201, { ok: true, product });
         }
 
         const productMatch = pathname.match(/^\/api\/admin\/products\/([^/]+)$/);
         if (productMatch && (method === "PUT" || method === "PATCH")) {
-            const product = db.products.find(function (p) { return p.id === productMatch[1]; });
-            if (!product) return json(res, 404, { error: "Product not found." });
+            const { data: product, error: findErr } = await supabase
+                .from("products").select("*").eq("id", productMatch[1]).maybeSingle();
+            if (findErr || !product) return json(res, 404, { error: "Product not found." });
+
             const body = await readBody(req);
-            if (body.name !== undefined) product.name = String(body.name).trim() || product.name;
-            if (body.price !== undefined && parseFloat(body.price) >= 0) product.price = parseFloat(body.price);
-            if (body.stock !== undefined) product.stock = Math.max(0, parseInt(body.stock, 10) || 0);
-            if (body.status !== undefined) product.status = body.status === "hidden" ? "hidden" : "active";
-            if (body.tag !== undefined) product.tag = String(body.tag).trim();
-            if (body.image !== undefined) product.image = String(body.image);
-            if (body.alt !== undefined) product.alt = String(body.alt);
-            if (Array.isArray(body.categories) && body.categories.length) product.categories = body.categories;
-            saveDb();
-            return json(res, 200, { ok: true, product: product });
+            const updates = {};
+            if (body.name !== undefined) updates.name = String(body.name).trim() || product.name;
+            if (body.price !== undefined && parseFloat(body.price) >= 0) updates.price = parseFloat(body.price);
+            if (body.stock !== undefined) updates.stock = Math.max(0, parseInt(body.stock, 10) || 0);
+            if (body.status !== undefined) updates.status = body.status === "hidden" ? "hidden" : "active";
+            if (body.tag !== undefined) updates.tag = String(body.tag).trim();
+            if (body.image !== undefined) updates.image = String(body.image);
+            if (body.alt !== undefined) updates.alt = String(body.alt);
+            if (Array.isArray(body.categories) && body.categories.length) updates.categories = body.categories;
+
+            const { data: updated, error: upErr } = await supabase
+                .from("products").update(updates).eq("id", productMatch[1]).select().single();
+            if (upErr) return dbErr(res, upErr);
+            return json(res, 200, { ok: true, product: updated });
         }
 
         if (productMatch && method === "DELETE") {
-            const index = db.products.findIndex(function (p) { return p.id === productMatch[1]; });
-            if (index === -1) return json(res, 404, { error: "Product not found." });
-            db.products.splice(index, 1);
-            saveDb();
+            const { error } = await supabase.from("products").delete().eq("id", productMatch[1]);
+            if (error) return dbErr(res, error);
             return json(res, 200, { ok: true });
         }
 
         const orderMatch = pathname.match(/^\/api\/admin\/orders\/([^/]+)$/);
         if (orderMatch && (method === "PUT" || method === "PATCH")) {
-            const order = db.orders.find(function (o) { return o.id === orderMatch[1]; });
-            if (!order) return json(res, 404, { error: "Order not found." });
             const body = await readBody(req);
             const allowed = ["new", "packed", "shipped", "delivered", "cancelled"];
-            if (allowed.indexOf(body.status) !== -1) order.status = body.status;
-            saveDb();
-            return json(res, 200, { ok: true, order: order });
+            if (allowed.indexOf(body.status) === -1) return json(res, 400, { error: "Invalid status." });
+            const { data: updated, error } = await supabase
+                .from("orders").update({ status: body.status }).eq("id", orderMatch[1]).select().single();
+            if (error) return dbErr(res, error);
+            return json(res, 200, { ok: true, order: updated });
         }
 
         if (pathname === "/api/admin/upload" && method === "POST") {
@@ -341,8 +379,6 @@ async function handleApi(req, res, pathname) {
             fs.mkdirSync(UPLOAD_DIR, { recursive: true });
             const filename = slugify(body.name || "photo") + "-" + Date.now() + "." + ext;
             fs.writeFileSync(path.join(UPLOAD_DIR, filename), Buffer.from(match[2], "base64"));
-            /* served via the /uploads/ static route below, which reads from UPLOAD_DIR
-               wherever it actually lives (repo folder locally, persistent disk on Render) */
             return json(res, 201, { ok: true, path: "uploads/" + filename });
         }
     }
@@ -369,20 +405,12 @@ const MIME = {
 };
 
 function serveStatic(req, res, pathname) {
-    /* Uploaded product photos: served from UPLOAD_DIR, which may live outside
-       ROOT (a Render persistent disk) rather than assets/img/uploads. */
     const uploadMatch = /^\/(?:uploads|assets\/img\/uploads)\/([^/]+)$/.exec(pathname);
     if (uploadMatch) {
         const uploadPath = path.join(UPLOAD_DIR, uploadMatch[1]);
-        if (!uploadPath.startsWith(UPLOAD_DIR)) {
-            res.writeHead(403);
-            return res.end("Forbidden");
-        }
+        if (!uploadPath.startsWith(UPLOAD_DIR)) { res.writeHead(403); return res.end("Forbidden"); }
         return fs.readFile(uploadPath, function (err, content) {
-            if (err) {
-                res.writeHead(404, { "Content-Type": "text/plain" });
-                return res.end("Not found");
-            }
+            if (err) { res.writeHead(404, { "Content-Type": "text/plain" }); return res.end("Not found"); }
             const ext = path.extname(uploadPath).toLowerCase();
             res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": "max-age=60" });
             res.end(content);
@@ -390,18 +418,12 @@ function serveStatic(req, res, pathname) {
     }
 
     let filePath = path.normalize(path.join(ROOT, decodeURIComponent(pathname)));
-    if (!filePath.startsWith(ROOT)) {
-        res.writeHead(403);
-        return res.end("Forbidden");
-    }
+    if (!filePath.startsWith(ROOT)) { res.writeHead(403); return res.end("Forbidden"); }
     if (pathname === "/" || pathname === "") filePath = path.join(ROOT, "index.html");
     fs.stat(filePath, function (err, stats) {
         if (!err && stats.isDirectory()) filePath = path.join(filePath, "index.html");
         fs.readFile(filePath, function (err, content) {
-            if (err) {
-                res.writeHead(404, { "Content-Type": "text/plain" });
-                return res.end("Not found");
-            }
+            if (err) { res.writeHead(404, { "Content-Type": "text/plain" }); return res.end("Not found"); }
             const ext = path.extname(filePath).toLowerCase();
             res.writeHead(200, {
                 "Content-Type": MIME[ext] || "application/octet-stream",
@@ -424,7 +446,7 @@ const server = http.createServer(function (req, res) {
 });
 
 server.listen(PORT, function () {
-    console.log("Lumina store running:");
+    console.log("Lumina store running (Supabase backend):");
     console.log("  Shop   → http://localhost:" + PORT + "/shop.html");
     console.log("  Admin  → http://localhost:" + PORT + "/admin.html  (password: " + ADMIN_PASSWORD + ")");
 });

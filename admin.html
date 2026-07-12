@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumina | Admin</title>
+<meta content="noindex, nofollow" name="robots"/>
+<link href="assets/img/lumina-logo.png?v=2" rel="icon" type="image/png"/>
+<script>document.documentElement.classList.add('js');</script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@400;600;700&amp;family=EB+Garamond:ital,wght@0,400;1,400&amp;family=Hanken+Grotesk:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+          font-family: 'Material Symbols Outlined';
+          font-weight: normal;
+          font-style: normal;
+          font-size: 24px;
+          line-height: 1;
+          letter-spacing: normal;
+          text-transform: none;
+          display: inline-block;
+          white-space: nowrap;
+          word-wrap: normal;
+          direction: ltr;
+          -webkit-font-feature-settings: 'liga';
+          -webkit-font-smoothing: antialiased;
+        }
+        [data-tab-btn].tab-active {
+            color: var(--lumina-copper, #A8763E);
+            border-color: var(--lumina-copper, #A8763E);
+        }
+        [data-tab-btn] {
+            padding-bottom: 6px;
+            border-bottom: 2px solid transparent;
+        }
+      </style>
+<link href="assets/css/tailwind.css" rel="stylesheet"/>
+<link href="assets/css/site.css" rel="stylesheet"/>
+<script defer="" src="assets/js/admin.js"></script>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen">
+
+<!-- Login gate -->
+<div class="min-h-screen flex items-center justify-center p-4" id="login-view">
+<div class="w-full max-w-sm bg-light-cream border border-copper-bronze/30 shadow-lg px-8 py-10 text-center">
+<img alt="Lumina logo" class="w-20 h-20 object-contain mx-auto mb-4" src="assets/img/lumina-logo.png?v=2"/>
+<h1 class="font-headline-md text-headline-md text-copper-bronze mb-2">Lumina Admin</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mb-8">Enter the admin password to manage the store.</p>
+<form class="flex flex-col gap-4" id="login-form">
+<label class="sr-only" for="admin-password">Admin password</label>
+<input autocomplete="current-password" class="w-full bg-transparent border-0 border-b border-copper-bronze focus:ring-0 focus:border-copper-bronze px-0 py-2 text-deep-charcoal placeholder-on-surface-variant/50 outline-none text-center" id="admin-password" placeholder="Password" required="" type="password"/>
+<p class="font-body-md text-sm text-error hidden" id="login-error"></p>
+<button class="btn-sheen w-full px-4 py-3 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" type="submit">Sign In</button>
+</form>
+</div>
+</div>
+
+<!-- Dashboard -->
+<div class="hidden" id="admin-view">
+<header class="w-full bg-light-cream border-b border-copper-bronze/30 sticky top-0 z-40">
+<div class="flex items-center justify-between px-margin-mobile md:px-gutter py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-3">
+<img alt="Lumina logo" class="w-12 h-12 object-contain" src="assets/img/lumina-logo.png?v=2"/>
+<span class="font-headline-md text-2xl text-copper-bronze uppercase tracking-widest">Lumina Admin</span>
+</div>
+<div class="flex items-center gap-4">
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest" href="shop.html" target="_blank">View Shop ↗</a>
+<button class="font-label-caps text-label-caps text-on-surface-variant hover:text-error uppercase tracking-widest" id="logout-btn">Sign Out</button>
+</div>
+</div>
+<nav class="flex gap-8 px-margin-mobile md:px-gutter max-w-container-max mx-auto overflow-x-auto">
+<button class="font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest whitespace-nowrap py-3 tab-active" data-tab-btn="overview">Overview</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest whitespace-nowrap py-3" data-tab-btn="orders">Orders <span class="hidden" data-badge="orders"></span></button>
+<button class="font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest whitespace-nowrap py-3" data-tab-btn="products">Products</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant hover:text-copper-bronze uppercase tracking-widest whitespace-nowrap py-3" data-tab-btn="newsletter">Newsletter <span class="hidden" data-badge="newsletter"></span></button>
+</nav>
+</header>
+
+<main class="w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-10">
+<section data-tab="overview"></section>
+<section class="hidden" data-tab="orders"></section>
+<section class="hidden" data-tab="products"></section>
+<section class="hidden" data-tab="newsletter"></section>
+</main>
+</div>
+</body></html>
