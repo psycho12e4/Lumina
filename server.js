@@ -14,9 +14,15 @@ const path = require("path");
 const crypto = require("crypto");
 
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, "data");
+/* On Render, set LUMINA_DATA_DIR to a mounted persistent disk (e.g. /data)
+   so orders/stock/subscribers and uploaded photos survive redeploys. */
+const DATA_DIR = process.env.LUMINA_DATA_DIR
+    ? path.join(process.env.LUMINA_DATA_DIR, "data")
+    : path.join(ROOT, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
-const UPLOAD_DIR = path.join(ROOT, "assets", "img", "uploads");
+const UPLOAD_DIR = process.env.LUMINA_DATA_DIR
+    ? path.join(process.env.LUMINA_DATA_DIR, "uploads")
+    : path.join(ROOT, "assets", "img", "uploads");
 const PORT = process.env.PORT || 4173;
 const ADMIN_PASSWORD = process.env.LUMINA_ADMIN_PASSWORD || "lumina-admin";
 
@@ -335,7 +341,9 @@ async function handleApi(req, res, pathname) {
             fs.mkdirSync(UPLOAD_DIR, { recursive: true });
             const filename = slugify(body.name || "photo") + "-" + Date.now() + "." + ext;
             fs.writeFileSync(path.join(UPLOAD_DIR, filename), Buffer.from(match[2], "base64"));
-            return json(res, 201, { ok: true, path: "assets/img/uploads/" + filename });
+            /* served via the /uploads/ static route below, which reads from UPLOAD_DIR
+               wherever it actually lives (repo folder locally, persistent disk on Render) */
+            return json(res, 201, { ok: true, path: "uploads/" + filename });
         }
     }
 
@@ -361,6 +369,26 @@ const MIME = {
 };
 
 function serveStatic(req, res, pathname) {
+    /* Uploaded product photos: served from UPLOAD_DIR, which may live outside
+       ROOT (a Render persistent disk) rather than assets/img/uploads. */
+    const uploadMatch = /^\/(?:uploads|assets\/img\/uploads)\/([^/]+)$/.exec(pathname);
+    if (uploadMatch) {
+        const uploadPath = path.join(UPLOAD_DIR, uploadMatch[1]);
+        if (!uploadPath.startsWith(UPLOAD_DIR)) {
+            res.writeHead(403);
+            return res.end("Forbidden");
+        }
+        return fs.readFile(uploadPath, function (err, content) {
+            if (err) {
+                res.writeHead(404, { "Content-Type": "text/plain" });
+                return res.end("Not found");
+            }
+            const ext = path.extname(uploadPath).toLowerCase();
+            res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": "max-age=60" });
+            res.end(content);
+        });
+    }
+
     let filePath = path.normalize(path.join(ROOT, decodeURIComponent(pathname)));
     if (!filePath.startsWith(ROOT)) {
         res.writeHead(403);
