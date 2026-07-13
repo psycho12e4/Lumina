@@ -1,16 +1,39 @@
 /* Lumina — auth.js
-   Handles: session check, nav account icon, login/signup forms,
-   page guard (data-require-auth), account page rendering, logout. */
+   Backed by Supabase Auth (client-side, via the CDN UMD bundle loaded
+   dynamically below). Handles: session bootstrap, nav account icon,
+   login/signup forms, page guard (data-require-auth), account page
+   rendering, logout. Exposes window.LuminaAuth for main.js/product.js. */
 (function () {
     "use strict";
+
+    var SUPABASE_URL = "https://wovyvnazmlzhoiqcdfoc.supabase.co";
+    var SUPABASE_ANON_KEY = "sb_publishable_CFdXRK0PN6SzKHxvcAPTrA_e1bXODq6";
 
     var PAGE = location.pathname.split("/").pop() || "index.html";
     var AUTH_PAGES = { "login.html": true, "signup.html": true };
     var REQUIRES_AUTH = document.body.hasAttribute("data-require-auth");
 
+    /* ---- Load the Supabase JS SDK from CDN, then create one client ---- */
+
+    var sbClient = null;
+    var ready = new Promise(function (resolve) {
+        if (window.supabase && window.supabase.createClient) {
+            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            resolve(sbClient);
+            return;
+        }
+        var script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js";
+        script.onload = function () {
+            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            resolve(sbClient);
+        };
+        document.head.appendChild(script);
+    });
+
     /* ---- Session ---- */
 
-    var _session = null; /* {id, name, email} or null */
+    var _session = null; /* Supabase session object, or null */
     var _sessionChecked = false;
     var _onSessionCallbacks = [];
 
@@ -19,21 +42,37 @@
         _onSessionCallbacks.push(cb);
     }
 
-    function resolveSession(user) {
-        _session = user;
+    function resolveSession(session) {
+        _session = session;
         _sessionChecked = true;
-        _onSessionCallbacks.forEach(function (cb) { cb(user); });
+        _onSessionCallbacks.forEach(function (cb) { cb(session); });
         _onSessionCallbacks = [];
     }
 
-    fetch("/api/auth/me", { credentials: "same-origin" })
-        .then(function (res) { return res.json(); })
-        .then(function (data) { resolveSession(data.user || null); })
-        .catch(function () { resolveSession(null); });
+    function sessionUser(session) {
+        if (!session || !session.user) return null;
+        return {
+            id: session.user.id,
+            email: session.user.email,
+            name: (session.user.user_metadata && session.user.user_metadata.name) || session.user.email
+        };
+    }
+
+    ready.then(function (sb) {
+        return sb.auth.getSession();
+    }).then(function (result) {
+        resolveSession(result.data.session);
+        sbClient.auth.onAuthStateChange(function (_event, session) {
+            resolveSession(session);
+            renderNav(sessionUser(session));
+            if (PAGE === "account.html" && session) renderAccountPage(sessionUser(session));
+        });
+    }).catch(function () { resolveSession(null); });
 
     /* ---- Redirect logic ---- */
 
-    onSession(function (user) {
+    onSession(function (session) {
+        var user = sessionUser(session);
         /* Logged-in user hits login/signup → send them to account */
         if (user && AUTH_PAGES[PAGE]) {
             var dest = new URLSearchParams(location.search).get("next") || "account.html";
@@ -55,19 +94,19 @@
     function renderNav(user) {
         var container = document.getElementById("nav-auth-actions");
         if (!container) return;
+        var existing = container.querySelector("[data-auth-link]");
+        if (existing) existing.remove();
 
-        /* Keep the cart button if it's already there (main.js adds it dynamically
-           on shop pages; on auth pages there's no cart so we leave it alone) */
         if (user) {
             container.insertAdjacentHTML("beforeend",
-                '<a href="account.html" aria-label="My account" class="p-2 relative transition-opacity duration-300 hover:opacity-70 flex items-center gap-1">' +
+                '<a href="account.html" data-auth-link="" aria-label="My account" class="p-2 relative transition-opacity duration-300 hover:opacity-70 flex items-center gap-1">' +
                 '<span class="material-symbols-outlined text-2xl">account_circle</span>' +
                 '<span class="hidden md:inline font-label-caps text-label-caps text-[11px] uppercase tracking-widest">' + escHtml(user.name.split(" ")[0]) + '</span>' +
                 '</a>'
             );
         } else {
             container.insertAdjacentHTML("beforeend",
-                '<a href="login.html" aria-label="Sign in" class="p-2 relative transition-opacity duration-300 hover:opacity-70 flex items-center gap-1">' +
+                '<a href="login.html" data-auth-link="" aria-label="Sign in" class="p-2 relative transition-opacity duration-300 hover:opacity-70 flex items-center gap-1">' +
                 '<span class="material-symbols-outlined text-2xl">account_circle</span>' +
                 '<span class="hidden md:inline font-label-caps text-label-caps text-[11px] uppercase tracking-widest">Sign in</span>' +
                 '</a>'
@@ -97,7 +136,7 @@
             '</div>';
 
         document.getElementById("logout-btn").addEventListener("click", function () {
-            fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" })
+            ready.then(function (sb) { return sb.auth.signOut(); })
                 .finally(function () { location.href = "index.html"; });
         });
     }
@@ -115,7 +154,6 @@
     var loginForm = document.getElementById("login-form");
     if (loginForm) {
         var next = new URLSearchParams(location.search).get("next") || "account.html";
-        /* Also update the signup link to carry ?next= through */
         var signupLink = document.getElementById("signup-link");
         if (signupLink && next !== "account.html") signupLink.href = "signup.html?next=" + encodeURIComponent(next);
 
@@ -127,18 +165,17 @@
             btn.disabled = true;
             btn.textContent = "Signing in…";
 
-            fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify({
+            ready.then(function (sb) {
+                return sb.auth.signInWithPassword({
                     email: document.getElementById("login-email").value.trim(),
                     password: document.getElementById("login-password").value
-                })
-            }).then(function (res) {
-                return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+                });
             }).then(function (result) {
-                if (!result.ok) throw new Error(result.data.error || "Sign in failed.");
+                if (result.error) throw new Error(
+                    /email.*not.*confirmed/i.test(result.error.message)
+                        ? "Please confirm your email first — check your inbox for the confirmation link."
+                        : (result.error.message || "Sign in failed.")
+                );
                 location.replace(next);
             }).catch(function (err) {
                 errorEl.textContent = err.message;
@@ -161,24 +198,34 @@
             event.preventDefault();
             var btn = document.getElementById("signup-btn");
             var errorEl = document.getElementById("signup-error");
+            errorEl.classList.remove("text-sage-green");
             errorEl.classList.add("hidden");
             btn.disabled = true;
             btn.textContent = "Creating account…";
 
-            fetch("/api/auth/signup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify({
-                    name: document.getElementById("signup-name").value.trim(),
-                    email: document.getElementById("signup-email").value.trim(),
-                    password: document.getElementById("signup-password").value
-                })
-            }).then(function (res) {
-                return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+            var name = document.getElementById("signup-name").value.trim();
+            var email = document.getElementById("signup-email").value.trim();
+            var password = document.getElementById("signup-password").value;
+
+            ready.then(function (sb) {
+                return sb.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: { name: name },
+                        emailRedirectTo: location.origin + "/login.html"
+                    }
+                });
             }).then(function (result) {
-                if (!result.ok) throw new Error(result.data.error || "Sign up failed.");
-                location.replace(nextS);
+                if (result.error) throw new Error(result.error.message || "Sign up failed.");
+                if (result.data.session) {
+                    location.replace(nextS);
+                    return;
+                }
+                errorEl.textContent = "Check your email — we've sent you a confirmation link to finish creating your account.";
+                errorEl.classList.remove("hidden");
+                errorEl.classList.add("text-sage-green");
+                btn.textContent = "Check your email";
             }).catch(function (err) {
                 errorEl.textContent = err.message;
                 errorEl.classList.remove("hidden");
@@ -196,6 +243,11 @@
         });
     }
 
-    /* Expose for main.js to check session if needed */
-    window.LuminaAuth = { onSession: onSession };
+    /* Expose for main.js/product.js to check session + get a bearer token */
+    window.LuminaAuth = {
+        ready: ready,
+        onSession: function (cb) { onSession(function (session) { cb(sessionUser(session)); }); },
+        getSession: function () { return ready.then(function (sb) { return sb.auth.getSession(); }).then(function (r) { return r.data.session; }); },
+        signOut: function () { return ready.then(function (sb) { return sb.auth.signOut(); }); }
+    };
 })();

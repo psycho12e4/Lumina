@@ -17,8 +17,6 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
-const nodemailer = require("nodemailer");
-const bcrypt = require("bcrypt");
 
 const ROOT = __dirname;
 const UPLOAD_DIR = process.env.LUMINA_DATA_DIR
@@ -39,37 +37,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 /* ---- Helpers ---- */
 
 const adminTokens = new Set();
-/* email verification tokens: token → {email, expiresAt} */
-const verifiedEmails = new Map();
 
-function makeMailTransport() {
-    if (process.env.SMTP_HOST) {
-        return nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || "587", 10),
-            secure: process.env.SMTP_SECURE === "true",
-            auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-        });
-    }
-    /* Ethereal test account — credentials printed to console on first use */
-    return null;
-}
-let _transport = null;
-async function getTransport() {
-    if (_transport) return _transport;
-    if (process.env.SMTP_HOST) {
-        _transport = makeMailTransport();
-        return _transport;
-    }
-    const testAccount = await nodemailer.createTestAccount();
-    _transport = nodemailer.createTransport({
-        host: testAccount.smtp.host,
-        port: testAccount.smtp.port,
-        secure: testAccount.smtp.secure,
-        auth: { user: testAccount.user, pass: testAccount.pass }
-    });
-    console.log("[EMAIL TEST] Ethereal preview account: " + testAccount.user);
-    return _transport;
+/* Validates a Supabase Auth JWT (sent as "Authorization: Bearer <token>") and
+   returns {id, email, name} for the authenticated user, or null. */
+async function getAuthUser(req) {
+    const header = req.headers.authorization || "";
+    const match = header.match(/^Bearer (.+)$/);
+    if (!match) return null;
+    const { data, error } = await supabase.auth.getUser(match[1]);
+    if (error || !data || !data.user) return null;
+    const user = data.user;
+    return { id: user.id, email: user.email, name: (user.user_metadata && user.user_metadata.name) || user.email };
 }
 
 function json(res, status, body) {
@@ -104,14 +82,6 @@ function isAdmin(req) {
 
 function slugify(name) {
     return String(name).toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "product";
-}
-
-function parseCookie(str) {
-    return str.split(";").reduce(function (out, part) {
-        var eq = part.indexOf("=");
-        if (eq > 0) out[part.slice(0, eq).trim()] = decodeURIComponent(part.slice(eq + 1).trim());
-        return out;
-    }, {});
 }
 
 function dbErr(res, err) {
@@ -159,34 +129,34 @@ async function handleApi(req, res, pathname) {
     }
 
     if (pathname === "/api/reviews" && method === "POST") {
+        const user = await getAuthUser(req);
+        if (!user) return json(res, 401, { error: "Please sign in to write a review." });
+
         const body = await readBody(req);
         const productId = String(body.productId || "").trim();
-        const orderId = String(body.orderId || "").trim();
-        const phone = String(body.phone || "").trim();
-        const name = String(body.name || "").trim();
         const title = String(body.title || "").trim();
         const reviewBody = String(body.body || "").trim();
         const rating = parseInt(body.rating, 10);
 
-        if (!productId || !orderId || !phone) return json(res, 400, { error: "Order ID and phone number are required to verify your purchase." });
-        if (!name || !reviewBody) return json(res, 400, { error: "Name and review text are required." });
+        if (!productId) return json(res, 400, { error: "Missing product." });
+        if (!reviewBody) return json(res, 400, { error: "Review text is required." });
         if (!(rating >= 1 && rating <= 5)) return json(res, 400, { error: "Rating must be between 1 and 5." });
 
-        const { data: order, error: orderErr } = await supabase
+        const { data: orders, error: orderErr } = await supabase
             .from("orders")
-            .select("*")
-            .eq("id", orderId)
-            .maybeSingle();
+            .select("*");
         if (orderErr) return dbErr(res, orderErr);
 
-        const purchased = order && order.customer && order.customer.phone === phone &&
-            Array.isArray(order.items) && order.items.some(function (i) { return i.id === productId; });
-        if (!purchased) return json(res, 403, { error: "We couldn't verify this purchase. Check your order ID and phone number." });
+        const purchase = (orders || []).find(function (o) {
+            return o.customer && o.customer.email === user.email &&
+                Array.isArray(o.items) && o.items.some(function (i) { return i.id === productId; });
+        });
+        if (!purchase) return json(res, 403, { error: "We couldn't find a purchase of this product on your account." });
 
         const { error } = await supabase.from("reviews").insert({
             product_id: productId,
-            order_id: orderId,
-            name,
+            order_id: purchase.id,
+            name: user.name,
             rating,
             title,
             body: reviewBody,
@@ -217,20 +187,15 @@ async function handleApi(req, res, pathname) {
     }
 
     if (pathname === "/api/orders" && method === "POST") {
+        const user = await getAuthUser(req);
+        if (!user) return json(res, 401, { error: "Please sign in to place an order." });
+
         const body = await readBody(req);
         const customer = body.customer || {};
         const name = String(customer.name || "").trim();
         const phone = String(customer.phone || "").trim();
         if (!name || !phone) return json(res, 400, { error: "Name and mobile number are required." });
         if (!Array.isArray(body.items) || !body.items.length) return json(res, 400, { error: "Your bag is empty." });
-
-        /* Email must have been verified in the last 30 min */
-        const customerEmail = String(customer.email || "").trim().toLowerCase();
-        const vt = body.verificationToken ? verifiedEmails.get(body.verificationToken) : null;
-        if (!vt || vt.email !== customerEmail || vt.expiresAt < Date.now()) {
-            return json(res, 403, { error: "Email address not verified. Please complete email verification." });
-        }
-        verifiedEmails.delete(body.verificationToken); /* single-use */
 
         /* resolve items against the catalog */
         const ids = body.items.map(function (i) { return i.id; }).filter(Boolean);
@@ -285,7 +250,7 @@ async function handleApi(req, res, pathname) {
             customer: {
                 name,
                 phone,
-                email: String(customer.email || "").trim(),
+                email: user.email,
                 address: String(customer.address || "").trim()
             },
             items: resolved.map(function (line) {
@@ -304,130 +269,6 @@ async function handleApi(req, res, pathname) {
         if (orderErr) return dbErr(res, orderErr);
 
         return json(res, 201, { ok: true, order: { id: order.id, total: order.total, authorization: order.payment.authorization } });
-    }
-
-    if (pathname === "/api/otp/send" && method === "POST") {
-        const body = await readBody(req);
-        const email = String(body.email || "").trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return json(res, 400, { error: "Please enter a valid email address." });
-        }
-        const code = String(Math.floor(100000 + Math.random() * 900000));
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); /* 10 min */
-
-        await supabase.from("email_verifications").delete().eq("email", email).eq("verified", false);
-        const { error } = await supabase.from("email_verifications").insert({ email, code, expires_at: expiresAt });
-        if (error) return dbErr(res, error);
-
-        const transport = await getTransport();
-        const info = await transport.sendMail({
-            from: process.env.SMTP_FROM || '"Lumina Candles" <noreply@lumina.store>',
-            to: email,
-            subject: "Your Lumina verification code",
-            text: "Your verification code is: " + code + "\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.",
-            html: '<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#faf8f5;border:1px solid #e8d8c4;">' +
-                '<h2 style="color:#A8763E;letter-spacing:.1em;font-size:22px;margin:0 0 16px">Lumina</h2>' +
-                '<p style="color:#333;font-size:16px;margin:0 0 8px">Your verification code is:</p>' +
-                '<div style="font-size:40px;font-weight:bold;letter-spacing:.3em;color:#333;padding:20px 0;">' + code + '</div>' +
-                '<p style="color:#888;font-size:13px;margin:16px 0 0">Expires in 10 minutes. If you didn\'t request this, ignore this email.</p></div>'
-        });
-
-        const testMode = !process.env.SMTP_HOST;
-        if (testMode) {
-            console.log("[EMAIL OTP] To: " + email + "  Code: " + code + "  Preview: " + nodemailer.getTestMessageUrl(info));
-        }
-
-        return json(res, 200, { ok: true, testMode });
-    }
-
-    if (pathname === "/api/otp/verify" && method === "POST") {
-        const body = await readBody(req);
-        const email = String(body.email || "").trim().toLowerCase();
-        const code = String(body.code || "").trim();
-        if (!email || !code) return json(res, 400, { error: "Email and code are required." });
-
-        const { data: row, error } = await supabase
-            .from("email_verifications")
-            .select("*")
-            .eq("email", email)
-            .eq("code", code)
-            .eq("verified", false)
-            .gt("expires_at", new Date().toISOString())
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        if (error) return dbErr(res, error);
-        if (!row) return json(res, 400, { error: "Invalid or expired code. Please request a new one." });
-
-        await supabase.from("email_verifications").update({ verified: true }).eq("id", row.id);
-
-        const token = crypto.randomBytes(24).toString("hex");
-        verifiedEmails.set(token, { email, expiresAt: Date.now() + 30 * 60 * 1000 });
-        return json(res, 200, { ok: true, verificationToken: token });
-    }
-
-    /* -- user auth -- */
-
-    if (pathname === "/api/auth/signup" && method === "POST") {
-        const body = await readBody(req);
-        const name = String(body.name || "").trim();
-        const email = String(body.email || "").trim().toLowerCase();
-        const password = String(body.password || "");
-        if (!name) return json(res, 400, { error: "Full name is required." });
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(res, 400, { error: "Please enter a valid email address." });
-        if (password.length < 8) return json(res, 400, { error: "Password must be at least 8 characters." });
-
-        const { data: existing } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
-        if (existing) return json(res, 409, { error: "An account with this email already exists." });
-
-        const password_hash = await bcrypt.hash(password, 10);
-        const { data: user, error: insertErr } = await supabase
-            .from("users").insert({ name, email, password_hash }).select("id,name,email").single();
-        if (insertErr) return dbErr(res, insertErr);
-
-        const token = crypto.randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); /* 30 days */
-        await supabase.from("user_sessions").insert({ token, user_id: user.id, expires_at: expiresAt });
-
-        res.setHeader("Set-Cookie", "lumina_session=" + token + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=" + (30 * 24 * 60 * 60));
-        return json(res, 201, { ok: true, user: { id: user.id, name: user.name, email: user.email } });
-    }
-
-    if (pathname === "/api/auth/login" && method === "POST") {
-        const body = await readBody(req);
-        const email = String(body.email || "").trim().toLowerCase();
-        const password = String(body.password || "");
-        if (!email || !password) return json(res, 400, { error: "Email and password are required." });
-
-        const { data: user } = await supabase.from("users").select("*").eq("email", email).maybeSingle();
-        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-            return json(res, 401, { error: "Incorrect email or password." });
-        }
-
-        const token = crypto.randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-        await supabase.from("user_sessions").insert({ token, user_id: user.id, expires_at: expiresAt });
-
-        res.setHeader("Set-Cookie", "lumina_session=" + token + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=" + (30 * 24 * 60 * 60));
-        return json(res, 200, { ok: true, user: { id: user.id, name: user.name, email: user.email } });
-    }
-
-    if (pathname === "/api/auth/logout" && method === "POST") {
-        const token = parseCookie(req.headers.cookie || "").lumina_session;
-        if (token) await supabase.from("user_sessions").delete().eq("token", token);
-        res.setHeader("Set-Cookie", "lumina_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
-        return json(res, 200, { ok: true });
-    }
-
-    if (pathname === "/api/auth/me" && method === "GET") {
-        const token = parseCookie(req.headers.cookie || "").lumina_session;
-        if (!token) return json(res, 401, { error: "Not logged in." });
-        const { data: session } = await supabase
-            .from("user_sessions").select("*, users(id,name,email)").eq("token", token)
-            .gt("expires_at", new Date().toISOString()).maybeSingle();
-        if (!session) return json(res, 401, { error: "Session expired." });
-        return json(res, 200, { user: session.users });
     }
 
     if (pathname === "/api/admin/login" && method === "POST") {

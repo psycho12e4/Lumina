@@ -15,6 +15,7 @@
     var reviews = [];
     var activeImage = 0;
     var selectedColor = null;
+    var session = null;
 
     function escapeHtml(text) {
         return String(text == null ? "" : text).replace(/[&<>"']/g, function (ch) {
@@ -98,22 +99,23 @@
             "</div>" +
             '<div>' +
             '<h3 class="font-headline-md text-[20px] text-deep-charcoal mb-4">Write a review</h3>' +
-            '<p class="font-body-md text-sm text-on-surface-variant mb-4">Only verified purchasers can review — enter the order ID and phone number used at checkout.</p>' +
-            '<form class="flex flex-col gap-4" data-review-form="">' +
-            '<div class="grid sm:grid-cols-2 gap-4">' +
-            '<input class="review-field" name="orderId" placeholder="Order ID (e.g. LUM-4)" required type="text"/>' +
-            '<input class="review-field" name="phone" placeholder="Phone used at checkout" required type="text"/>' +
-            "</div>" +
-            '<input class="review-field" name="name" placeholder="Your name" required type="text"/>' +
-            '<div class="star-input flex gap-1" data-star-input="" data-value="5">' +
-            [1, 2, 3, 4, 5].map(function (i) {
-                return '<span class="material-symbols-outlined text-2xl text-copper-bronze" data-star="' + i + '" style="font-variation-settings:\'FILL\' 1">star</span>';
-            }).join("") + "</div>" +
-            '<input class="review-field" name="title" placeholder="Review title (optional)" type="text"/>' +
-            '<textarea class="review-field" name="body" placeholder="Share your experience…" required rows="4"></textarea>' +
-            '<p class="font-body-md text-sm hidden" data-review-msg=""></p>' +
-            '<button class="btn-sheen px-8 py-3 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" type="submit">Submit Review</button>' +
-            "</form></div></div></div>";
+            (session ?
+                '<p class="font-body-md text-sm text-on-surface-variant mb-4">Only verified purchasers can review — we\'ll check your account\'s orders for this product.</p>' +
+                '<form class="flex flex-col gap-4" data-review-form="">' +
+                '<div class="star-input flex gap-1" data-star-input="" data-value="5">' +
+                [1, 2, 3, 4, 5].map(function (i) {
+                    return '<span class="material-symbols-outlined text-2xl text-copper-bronze" data-star="' + i + '" style="font-variation-settings:\'FILL\' 1">star</span>';
+                }).join("") + "</div>" +
+                '<input class="review-field" name="title" placeholder="Review title (optional)" type="text"/>' +
+                '<textarea class="review-field" name="body" placeholder="Share your experience…" required rows="4"></textarea>' +
+                '<p class="font-body-md text-sm hidden" data-review-msg=""></p>' +
+                '<button class="btn-sheen px-8 py-3 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" type="submit">Submit Review</button>' +
+                "</form>"
+                :
+                '<p class="font-body-md text-body-md text-on-surface-variant mb-4">Sign in to write a review — we verify it against your past orders.</p>' +
+                '<a class="btn-sheen inline-block px-8 py-3 bg-copper-bronze text-white font-label-caps text-label-caps uppercase tracking-widest hover:bg-toasted-almond hover:text-deep-charcoal transition-colors duration-300" href="login.html?next=' + encodeURIComponent(location.pathname + location.search) + '">Sign In</a>'
+            ) +
+            "</div></div></div>";
 
         bindContent();
     }
@@ -178,12 +180,9 @@
                 var rating = parseInt(starInput ? starInput.getAttribute("data-value") : 5, 10);
                 fetch("/api/reviews", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + session.access_token },
                     body: JSON.stringify({
                         productId: product.id,
-                        orderId: form.orderId.value.trim(),
-                        phone: form.phone.value.trim(),
-                        name: form.name.value.trim(),
                         rating: rating,
                         title: form.title.value.trim(),
                         body: form.body.value.trim()
@@ -221,12 +220,16 @@
         return;
     }
 
-    fetch("/api/products/" + encodeURIComponent(id), { cache: "no-store" })
-        .then(function (res) {
+    Promise.all([
+        fetch("/api/products/" + encodeURIComponent(id), { cache: "no-store" }).then(function (res) {
             if (!res.ok) throw new Error(res.status === 404 ? "Product not found." : "Could not load product.");
             return res.json();
-        })
-        .then(function (data) {
+        }),
+        window.LuminaAuth ? window.LuminaAuth.getSession() : Promise.resolve(null)
+    ])
+        .then(function (results) {
+            var data = results[0];
+            session = results[1];
             product = data.product;
             reviews = data.reviews || [];
             document.title = "Lumina | " + product.name;

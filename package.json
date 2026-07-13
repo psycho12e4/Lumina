@@ -19,8 +19,6 @@
     "tailwindcss": "^3.4.17"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.2",
-    "bcrypt": "^6.0.0",
-    "nodemailer": "^9.0.3"
+    "@supabase/supabase-js": "^2.110.2"
   }
 }
